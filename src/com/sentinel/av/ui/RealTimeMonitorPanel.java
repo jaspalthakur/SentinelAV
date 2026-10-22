@@ -2,13 +2,14 @@ package com.sentinel.av.ui;
 
 import com.sentinel.av.core.RealTimeMonitor;
 import com.sentinel.av.model.ScanResult;
+import com.sentinel.av.ui.components.CyberButton;
+import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.MonitorEventListener {
 
@@ -16,7 +17,7 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
     private final RealTimeMonitor monitor;
 
     private JLabel statusLabel;
-    private JButton toggleBtn;
+    private CyberButton toggleBtn;
     private DefaultListModel<String> watchedPathsModel;
     private DefaultListModel<String> eventsModel;
 
@@ -35,29 +36,24 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
 
     private void initComponents() {
         // --- Top Status & Toggle Banner ---
-        JPanel topCard = new JPanel(new BorderLayout(15, 15));
-        topCard.setBackground(CyberPalette.SURFACE);
-        topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(20, 25, 20, 25)
-        ));
+        CyberCard topCard = new CyberCard(CyberPalette.BORDER);
 
         JPanel statusTextPanel = new JPanel(new GridLayout(2, 1, 4, 4));
         statusTextPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("🛡️ Real-Time System Shield & File Watcher");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        titleLabel.setForeground(Color.WHITE);
+        JLabel titleLabel = new JLabel("\uD83D\uDEA1  Real-Time System Shield & File Watcher");
+        titleLabel.setFont(CyberPalette.FONT_TITLE_SMALL);
+        titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         statusLabel = new JLabel("Status: Unknown");
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        statusLabel.setFont(CyberPalette.FONT_SMALL);
+        statusLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         statusTextPanel.add(titleLabel);
         statusTextPanel.add(statusLabel);
 
-        toggleBtn = new JButton("Toggle Shield");
-        toggleBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        toggleBtn.setFocusPainted(false);
+        toggleBtn = new CyberButton("Turn OFF Shield", CyberButton.DANGER);
+        toggleBtn.setFont(CyberPalette.FONT_BODY_BOLD);
         toggleBtn.addActionListener(e -> {
             if (monitor.isRunning()) {
                 monitor.stopMonitoring();
@@ -74,16 +70,11 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
         centerSplit.setOpaque(false);
 
         // Left Panel: Watched Directories
-        JPanel watchedCard = new JPanel(new BorderLayout(10, 10));
-        watchedCard.setBackground(CyberPalette.SURFACE);
-        watchedCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+        CyberCard watchedCard = new CyberCard(CyberPalette.BORDER);
 
-        JLabel watchedTitle = new JLabel("📁 Monitored Directories");
-        watchedTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        watchedTitle.setForeground(Color.WHITE);
+        JLabel watchedTitle = new JLabel("\uD83D\uDCC1  Monitored Directories");
+        watchedTitle.setFont(CyberPalette.FONT_TITLE_SMALL);
+        watchedTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
         watchedPathsModel = new DefaultListModel<>();
         for (Path p : monitor.getWatchedPaths()) {
@@ -93,15 +84,13 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
         JList<String> watchedList = new JList<>(watchedPathsModel);
         watchedList.setBackground(CyberPalette.BACKGROUND);
         watchedList.setForeground(CyberPalette.TEXT_PRIMARY);
-        watchedList.setFont(new Font("Consolas", Font.PLAIN, 12));
+        watchedList.setFont(CyberPalette.FONT_CODE);
 
         JScrollPane watchedScroll = new JScrollPane(watchedList);
         watchedScroll.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
-        JButton addFolderBtn = new JButton("➕ Add Directory to Watch");
-        addFolderBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        addFolderBtn.setBackground(new Color(45, 55, 70));
-        addFolderBtn.setForeground(Color.WHITE);
+        CyberButton addFolderBtn = new CyberButton("\u2795  Add Directory to Watch", CyberButton.SECONDARY);
+        addFolderBtn.setFont(CyberPalette.FONT_SMALL);
         addFolderBtn.addActionListener(e -> addDirectoryToWatch());
 
         watchedCard.add(watchedTitle, BorderLayout.NORTH);
@@ -109,22 +98,17 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
         watchedCard.add(addFolderBtn, BorderLayout.SOUTH);
 
         // Right Panel: Live Activity Event Stream
-        JPanel eventsCard = new JPanel(new BorderLayout(10, 10));
-        eventsCard.setBackground(CyberPalette.SURFACE);
-        eventsCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+        CyberCard eventsCard = new CyberCard(CyberPalette.BORDER);
 
-        JLabel eventsTitle = new JLabel("⚡ Live Intercepted File Stream");
-        eventsTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        eventsTitle.setForeground(Color.WHITE);
+        JLabel eventsTitle = new JLabel("\u26A1  Live Intercepted File Stream");
+        eventsTitle.setFont(CyberPalette.FONT_TITLE_SMALL);
+        eventsTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
         eventsModel = new DefaultListModel<>();
         JList<String> eventsList = new JList<>(eventsModel);
         eventsList.setBackground(CyberPalette.BACKGROUND);
-        eventsList.setForeground(new Color(180, 230, 190));
-        eventsList.setFont(new Font("Consolas", Font.PLAIN, 12));
+        eventsList.setForeground(CyberPalette.SAFE);
+        eventsList.setFont(CyberPalette.FONT_CODE);
 
         JScrollPane eventsScroll = new JScrollPane(eventsList);
         eventsScroll.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
@@ -154,17 +138,15 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
 
     private void updateStatusUI(boolean isActive) {
         if (isActive) {
-            statusLabel.setText("Status: ACTIVE — Continuously monitoring file system changes in real time.");
-            statusLabel.setForeground(new Color(120, 230, 150));
+            statusLabel.setText("Status: ACTIVE \u2014 Continuously monitoring file system changes in real time.");
+            statusLabel.setForeground(CyberPalette.SAFE);
             toggleBtn.setText("Turn OFF Shield");
-            toggleBtn.setBackground(new Color(170, 50, 50));
-            toggleBtn.setForeground(Color.WHITE);
+            toggleBtn.setVariant(CyberButton.DANGER);
         } else {
-            statusLabel.setText("Status: INACTIVE — Background file monitoring is currently turned off.");
-            statusLabel.setForeground(new Color(255, 170, 80));
+            statusLabel.setText("Status: INACTIVE \u2014 Background file monitoring is currently turned off.");
+            statusLabel.setForeground(CyberPalette.WARNING);
             toggleBtn.setText("Turn ON Shield");
-            toggleBtn.setBackground(new Color(40, 140, 75));
-            toggleBtn.setForeground(Color.WHITE);
+            toggleBtn.setVariant(CyberButton.PRIMARY);
         }
     }
 
@@ -181,13 +163,8 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
     @Override
     public void onThreatIntercepted(ScanResult result) {
         SwingUtilities.invokeLater(() -> {
-            eventsModel.addElement("🚨 [INTERCEPTED THREAT] " + result.getThreatName() + " -> " + result.getFileName());
-            JOptionPane.showMessageDialog(this,
-                "🚨 REAL-TIME SHIELD INTERCEPTED A MALWARE THREAT!\n\nThreat: " + result.getThreatName() +
-                "\nFile: " + result.getFileName() +
-                "\n\nThe file has been automatically isolated in Quarantine Vault.",
-                "Real-Time Threat Intercepted",
-                JOptionPane.WARNING_MESSAGE);
+            eventsModel.addElement("\uD83D\uDEA8 [THREAT INTERCEPTED] " + result.getThreatName()
+                    + " -> " + result.getFileName());
         });
     }
 

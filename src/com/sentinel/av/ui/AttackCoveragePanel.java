@@ -1,5 +1,6 @@
 package com.sentinel.av.ui;
 
+import com.sentinel.av.ui.components.CyberButton;
 import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.StatusBadge;
@@ -7,6 +8,7 @@ import com.sentinel.av.ui.components.StatusBadge;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.io.File;
 import java.nio.file.Files;
@@ -30,12 +32,12 @@ public class AttackCoveragePanel extends JPanel {
         // --- Top Header Card ---
         CyberCard topCard = new CyberCard(CyberPalette.BORDER);
 
-        JLabel titleLabel = new JLabel("🎯 MITRE ATT&CK® Threat Technique Matrix & Coverage");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setForeground(Color.WHITE);
+        JLabel titleLabel = new JLabel("\uD83C\uDFAE  MITRE ATT&CK\u00AE Threat Technique Matrix & Coverage");
+        titleLabel.setFont(CyberPalette.FONT_TITLE_SMALL);
+        titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         JLabel subLabel = new JLabel("Live Rule Engine Coverage mapped against adversary Tactics & Techniques");
-        subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subLabel.setFont(CyberPalette.FONT_SMALL);
         subLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         JPanel titleGroup = new JPanel(new GridLayout(2, 1, 2, 2));
@@ -46,10 +48,8 @@ public class AttackCoveragePanel extends JPanel {
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnRow.setOpaque(false);
 
-        JButton exportStixBtn = new JButton("💾 Export STIX 2.1 Threat Report");
-        exportStixBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        exportStixBtn.setBackground(CyberPalette.ACCENT);
-        exportStixBtn.setForeground(Color.WHITE);
+        CyberButton exportStixBtn = new CyberButton("\uD83D\uDCBE  Export STIX 2.1 Threat Report", CyberButton.PRIMARY);
+        exportStixBtn.setFont(CyberPalette.FONT_SMALL);
         exportStixBtn.addActionListener(e -> exportStixReport());
 
         btnRow.add(exportStixBtn);
@@ -63,29 +63,50 @@ public class AttackCoveragePanel extends JPanel {
         String[] cols = {"Technique ID", "Tactic Name", "Technique Title", "Detection Engine", "Status / Coverage", "MITRE Reference"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
-        JTable matrixTable = new JTable(tableModel);
-        matrixTable.setBackground(CyberPalette.BACKGROUND);
-        matrixTable.setForeground(Color.WHITE);
+        JTable matrixTable = new JTable(tableModel) {
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+                Component c = super.prepareRenderer(renderer, row, column);
+                if (c instanceof JComponent) {
+                    boolean isSelected = isRowSelected(row);
+                    if (isSelected) {
+                        c.setBackground(CyberPalette.BORDER_ACTIVE);
+                    } else {
+                        c.setBackground(row % 2 == 0 ? CyberPalette.BACKGROUND
+                                : new Color(15, 22, 40));
+                    }
+                }
+                return c;
+            }
+        };
+        matrixTable.setForeground(CyberPalette.TEXT_PRIMARY);
         matrixTable.setGridColor(CyberPalette.BORDER);
         matrixTable.setRowHeight(30);
-        matrixTable.setFont(new Font("Consolas", Font.PLAIN, 12));
-        matrixTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        matrixTable.setFont(CyberPalette.FONT_CODE);
+        matrixTable.getTableHeader().setFont(CyberPalette.FONT_BODY_BOLD);
         matrixTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
         matrixTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        matrixTable.getTableHeader().setReorderingAllowed(false);
+        matrixTable.setAutoCreateRowSorter(true);
+        matrixTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        matrixTable.setIntercellSpacing(new Dimension(0, 1));
 
         // Coverage badge renderer
         matrixTable.getColumnModel().getColumn(4).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
             if (value != null) {
-                return new StatusBadge("COVERED", new Color(16, 185, 129), Color.WHITE);
+                return new StatusBadge("COVERED", CyberPalette.SAFE_BG, Color.WHITE);
             }
             return new JLabel("");
         });
 
         JScrollPane scrollPane = new JScrollPane(matrixTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
+        scrollPane.getViewport().setBackground(CyberPalette.BACKGROUND);
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 
@@ -134,9 +155,12 @@ public class AttackCoveragePanel extends JPanel {
                 "}";
             try {
                 Files.write(dest.toPath(), stixJson.getBytes());
-                JOptionPane.showMessageDialog(this, "STIX 2.1 Threat Report exported to " + dest.getAbsolutePath(), "Export Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                    "STIX 2.1 Threat Report exported to " + dest.getAbsolutePath(), "Export Success",
+                    JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Failed to export STIX report: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                    "Failed to export STIX report: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

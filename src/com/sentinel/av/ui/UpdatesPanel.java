@@ -3,6 +3,7 @@ package com.sentinel.av.ui;
 import com.sentinel.av.core.ActivityLogger;
 import com.sentinel.av.core.SignatureDatabase;
 import com.sentinel.av.model.VirusSignature;
+import com.sentinel.av.ui.components.CyberButton;
 import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.StatusBadge;
@@ -10,6 +11,7 @@ import com.sentinel.av.ui.components.StatusBadge;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.io.File;
 import java.nio.file.Files;
@@ -45,7 +47,7 @@ public class UpdatesPanel extends JPanel {
         titleLabel.setFont(CyberPalette.FONT_TITLE_LARGE);
         titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
-        statusLabel = new JLabel("Status: Updated Today · Definition Version 2026.10");
+        statusLabel = new JLabel("Status: Updated Today \u2022 Definition Version 2026.10");
         statusLabel.setFont(CyberPalette.FONT_BODY);
         statusLabel.setForeground(CyberPalette.SAFE);
 
@@ -62,16 +64,12 @@ public class UpdatesPanel extends JPanel {
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnRow.setOpaque(false);
 
-        JButton updateNowBtn = new JButton("🔄  Update Definitions Now");
+        CyberButton updateNowBtn = new CyberButton("\u27F3  Update Definitions Now", CyberButton.PRIMARY);
         updateNowBtn.setFont(CyberPalette.FONT_BODY_BOLD);
-        updateNowBtn.setBackground(CyberPalette.ACCENT);
-        updateNowBtn.setForeground(Color.WHITE);
         updateNowBtn.addActionListener(e -> checkForUpdates());
 
-        JButton addSigBtn = new JButton("+ Add Custom Definition");
-        addSigBtn.setFont(CyberPalette.FONT_BODY);
-        addSigBtn.setBackground(CyberPalette.SURFACE_HOVER);
-        addSigBtn.setForeground(CyberPalette.TEXT_PRIMARY);
+        CyberButton addSigBtn = new CyberButton("+ Add Custom Definition", CyberButton.SECONDARY);
+        addSigBtn.setFont(CyberPalette.FONT_SMALL);
         addSigBtn.addActionListener(e -> showAddSignatureDialog());
 
         btnRow.add(updateNowBtn);
@@ -80,6 +78,7 @@ public class UpdatesPanel extends JPanel {
         updateProgress = new JProgressBar(0, 100);
         updateProgress.setPreferredSize(new Dimension(100, 6));
         updateProgress.setVisible(false);
+        updateProgress.setForeground(CyberPalette.ACCENT);
 
         topCard.add(titleContainer, BorderLayout.CENTER);
         topCard.add(btnRow, BorderLayout.EAST);
@@ -91,18 +90,38 @@ public class UpdatesPanel extends JPanel {
         String[] cols = {"ID", "Threat Name", "Engine Type", "Hash / Pattern Signature", "Severity", "Description"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
-        signaturesTable = new JTable(tableModel);
-        signaturesTable.setBackground(new Color(15, 20, 34));
+        signaturesTable = new JTable(tableModel) {
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+                Component c = super.prepareRenderer(renderer, row, column);
+                if (c instanceof JComponent) {
+                    boolean isSelected = isRowSelected(row);
+                    if (isSelected) {
+                        c.setBackground(CyberPalette.BORDER_ACTIVE);
+                    } else {
+                        c.setBackground(row % 2 == 0 ? CyberPalette.BACKGROUND
+                                : new Color(15, 22, 40));
+                    }
+                }
+                return c;
+            }
+        };
         signaturesTable.setForeground(CyberPalette.TEXT_PRIMARY);
         signaturesTable.setGridColor(CyberPalette.BORDER);
         signaturesTable.setRowHeight(28);
         signaturesTable.setFont(CyberPalette.FONT_BODY);
         signaturesTable.getTableHeader().setFont(CyberPalette.FONT_BODY_BOLD);
-        signaturesTable.getTableHeader().setBackground(new Color(25, 32, 50));
+        signaturesTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
         signaturesTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        signaturesTable.getTableHeader().setReorderingAllowed(false);
+        signaturesTable.setAutoCreateRowSorter(true);
+        signaturesTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        signaturesTable.setIntercellSpacing(new Dimension(0, 1));
 
         // Severity renderer
         signaturesTable.getColumnModel().getColumn(4).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
@@ -114,6 +133,7 @@ public class UpdatesPanel extends JPanel {
 
         JScrollPane scrollPane = new JScrollPane(signaturesTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
+        scrollPane.getViewport().setBackground(CyberPalette.BACKGROUND);
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 
@@ -149,7 +169,8 @@ public class UpdatesPanel extends JPanel {
             statusLabel.setText("Status: Definitions Updated Just Now (Version 2026.10)");
             statusLabel.setForeground(CyberPalette.SAFE);
             ActivityLogger.getInstance().info("Updates", "Virus definitions updated successfully.");
-            JOptionPane.showMessageDialog(this, "Virus definition database updated to latest version!", "Updates Complete", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Virus definition database updated to latest version!",
+                    "Updates Complete", JOptionPane.INFORMATION_MESSAGE);
             updateProgress.setVisible(false);
         });
         timer.setRepeats(false);
@@ -163,7 +184,7 @@ public class UpdatesPanel extends JPanel {
         JComboBox<VirusSignature.Severity> severityBox = new JComboBox<>(VirusSignature.Severity.values());
         JTextField descField = new JTextField();
 
-        JPanel panel = new JPanel(new GridLayout(5, 2, 8, 8));
+        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
         panel.add(new JLabel("Threat Name:"));
         panel.add(nameField);
         panel.add(new JLabel("Type:"));
@@ -175,7 +196,19 @@ public class UpdatesPanel extends JPanel {
         panel.add(new JLabel("Description:"));
         panel.add(descField);
 
-        int res = JOptionPane.showConfirmDialog(this, panel, "Add New Virus Definition", JOptionPane.OK_CANCEL_OPTION);
+        for (Component c : panel.getComponents()) {
+            if (c instanceof JLabel) {
+                ((JLabel) c).setForeground(CyberPalette.TEXT_PRIMARY);
+                ((JLabel) c).setFont(CyberPalette.FONT_BODY);
+            } else if (c instanceof JComboBox<?> || c instanceof JTextField) {
+                c.setFont(CyberPalette.FONT_BODY);
+                c.setBackground(CyberPalette.INPUT_BG);
+                c.setForeground(CyberPalette.TEXT_PRIMARY);
+            }
+        }
+
+        int res = JOptionPane.showConfirmDialog(this, panel, "Add New Virus Definition",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (res == JOptionPane.OK_OPTION) {
             String name = nameField.getText().trim();
             String type = (String) typeBox.getSelectedItem();
@@ -184,7 +217,8 @@ public class UpdatesPanel extends JPanel {
             String desc = descField.getText().trim();
 
             if (name.isEmpty() || value.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Name and Hash/Pattern fields cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Name and Hash/Pattern fields cannot be empty.", "Error",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -200,7 +234,8 @@ public class UpdatesPanel extends JPanel {
             refreshTable();
             mainFrame.updateDashboardStats();
             ActivityLogger.getInstance().info("Signatures", "Added custom signature: " + name);
-            JOptionPane.showMessageDialog(this, "Signature added successfully!", "Added", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Signature added successfully!", "Added",
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }

@@ -2,6 +2,7 @@ package com.sentinel.av.ui;
 
 import com.sentinel.av.core.RealTimeMonitor;
 import com.sentinel.av.model.ScanResult;
+import com.sentinel.av.ui.components.CyberButton;
 import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
 
@@ -17,7 +18,7 @@ public class ProtectionPanel extends JPanel implements RealTimeMonitor.MonitorEv
 
     private JLabel statusTitle;
     private JLabel statusLabel;
-    private JButton toggleBtn;
+    private CyberButton toggleBtn;
     private JPanel warningBanner;
     private DefaultListModel<String> watchedPathsModel;
     private DefaultListModel<String> eventsModel;
@@ -46,18 +47,16 @@ public class ProtectionPanel extends JPanel implements RealTimeMonitor.MonitorEv
         statusTitle.setFont(CyberPalette.FONT_TITLE_LARGE);
         statusTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
-        statusLabel = new JLabel("Status: Active · Monitoring file downloads and system activity");
+        statusLabel = new JLabel("Status: Active \u2022 Monitoring file downloads and system activity");
         statusLabel.setFont(CyberPalette.FONT_BODY);
         statusLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         statusTextPanel.add(statusTitle);
         statusTextPanel.add(statusLabel);
 
-        toggleBtn = new JButton("Pause Protection");
+        toggleBtn = new CyberButton("Pause Protection", CyberButton.SECONDARY);
         toggleBtn.setFont(CyberPalette.FONT_BODY_BOLD);
-        toggleBtn.setFocusPainted(false);
         toggleBtn.setPreferredSize(new Dimension(160, 40));
-        toggleBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         toggleBtn.addActionListener(e -> handleToggleClick());
 
         topCard.add(statusTextPanel, BorderLayout.CENTER);
@@ -65,20 +64,17 @@ public class ProtectionPanel extends JPanel implements RealTimeMonitor.MonitorEv
 
         // Warning Banner when OFF
         warningBanner = new JPanel(new BorderLayout(10, 0));
-        warningBanner.setBackground(new Color(55, 38, 15));
+        warningBanner.setBackground(CyberPalette.WARNING_BG);
         warningBanner.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(CyberPalette.WARNING, 1),
-            new EmptyBorder(10, 16, 10, 16)
-        ));
+            new EmptyBorder(10, 16, 10, 16)));
 
-        JLabel warnText = new JLabel("⚠️ Real-Time Protection is PAUSED. Downloads and new files are NOT being scanned!");
+        JLabel warnText = new JLabel("\u26A0  Real-Time Protection is PAUSED. Downloads and new files are NOT being scanned!");
         warnText.setFont(CyberPalette.FONT_BODY_BOLD);
         warnText.setForeground(CyberPalette.WARNING);
 
-        JButton resumeBtn = new JButton("Resume Protection");
+        CyberButton resumeBtn = new CyberButton("Resume Protection", CyberButton.PRIMARY);
         resumeBtn.setFont(CyberPalette.FONT_BODY_BOLD);
-        resumeBtn.setBackground(CyberPalette.SAFE);
-        resumeBtn.setForeground(Color.WHITE);
         resumeBtn.addActionListener(e -> monitor.startMonitoring());
 
         warningBanner.add(warnText, BorderLayout.CENTER);
@@ -96,8 +92,10 @@ public class ProtectionPanel extends JPanel implements RealTimeMonitor.MonitorEv
 
         // Monitored Folders
         CyberCard watchedCard = new CyberCard(CyberPalette.BORDER);
+        watchedCard.setHoverEnabled(true);
+
         JLabel watchedTitle = new JLabel("Monitored Directories");
-        watchedTitle.setFont(CyberPalette.FONT_TITLE_MEDIUM);
+        watchedTitle.setFont(CyberPalette.FONT_TITLE_SMALL);
         watchedTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
         watchedPathsModel = new DefaultListModel<>();
@@ -106,17 +104,15 @@ public class ProtectionPanel extends JPanel implements RealTimeMonitor.MonitorEv
         }
 
         JList<String> watchedList = new JList<>(watchedPathsModel);
-        watchedList.setBackground(new Color(15, 20, 34));
+        watchedList.setBackground(CyberPalette.BACKGROUND);
         watchedList.setForeground(CyberPalette.TEXT_PRIMARY);
         watchedList.setFont(CyberPalette.FONT_CODE);
 
         JScrollPane watchedScroll = new JScrollPane(watchedList);
         watchedScroll.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
-        JButton addFolderBtn = new JButton("+ Add Directory");
-        addFolderBtn.setFont(CyberPalette.FONT_BODY);
-        addFolderBtn.setBackground(CyberPalette.SURFACE_HOVER);
-        addFolderBtn.setForeground(CyberPalette.TEXT_PRIMARY);
+        CyberButton addFolderBtn = new CyberButton("+ Add Directory", CyberButton.SECONDARY);
+        addFolderBtn.setFont(CyberPalette.FONT_SMALL);
         addFolderBtn.addActionListener(e -> addDirectoryToWatch());
 
         watchedCard.add(watchedTitle, BorderLayout.NORTH);
@@ -125,13 +121,15 @@ public class ProtectionPanel extends JPanel implements RealTimeMonitor.MonitorEv
 
         // Live Activity Event Feed
         CyberCard eventsCard = new CyberCard(CyberPalette.BORDER);
+        eventsCard.setHoverEnabled(true);
+
         JLabel eventsTitle = new JLabel("Live File Intercept Feed");
-        eventsTitle.setFont(CyberPalette.FONT_TITLE_MEDIUM);
+        eventsTitle.setFont(CyberPalette.FONT_TITLE_SMALL);
         eventsTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
         eventsModel = new DefaultListModel<>();
         JList<String> eventsList = new JList<>(eventsModel);
-        eventsList.setBackground(new Color(15, 20, 34));
+        eventsList.setBackground(CyberPalette.BACKGROUND);
         eventsList.setForeground(CyberPalette.TEXT_SECONDARY);
         eventsList.setFont(CyberPalette.FONT_CODE);
 
@@ -181,18 +179,16 @@ public class ProtectionPanel extends JPanel implements RealTimeMonitor.MonitorEv
         if (isActive) {
             statusTitle.setText("Real-Time Protection Active");
             statusTitle.setForeground(CyberPalette.SAFE);
-            statusLabel.setText("Status: ACTIVE · Background file monitoring active in real time");
+            statusLabel.setText("Status: ACTIVE \u2022 Background file monitoring active in real time");
             toggleBtn.setText("Pause Protection");
-            toggleBtn.setBackground(CyberPalette.SURFACE_HOVER);
-            toggleBtn.setForeground(CyberPalette.TEXT_PRIMARY);
+            toggleBtn.setVariant(CyberButton.SECONDARY);
             warningBanner.setVisible(false);
         } else {
             statusTitle.setText("Real-Time Protection Paused");
             statusTitle.setForeground(CyberPalette.WARNING);
-            statusLabel.setText("Status: PAUSED · System background file monitoring is currently off");
+            statusLabel.setText("Status: PAUSED \u2022 System background file monitoring is currently off");
             toggleBtn.setText("Resume Protection");
-            toggleBtn.setBackground(CyberPalette.SAFE);
-            toggleBtn.setForeground(Color.WHITE);
+            toggleBtn.setVariant(CyberButton.PRIMARY);
             warningBanner.setVisible(true);
         }
     }
@@ -210,7 +206,8 @@ public class ProtectionPanel extends JPanel implements RealTimeMonitor.MonitorEv
     @Override
     public void onThreatIntercepted(ScanResult result) {
         SwingUtilities.invokeLater(() -> {
-            eventsModel.addElement("🚨 [THREAT INTERCEPTED] " + result.getThreatName() + " -> " + result.getFileName());
+            eventsModel.addElement("\uD83D\uDEA8 [THREAT INTERCEPTED] " + result.getThreatName()
+                    + " -> " + result.getFileName());
         });
     }
 

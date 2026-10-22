@@ -5,10 +5,12 @@ import com.sentinel.av.core.ActivityLogger;
 import com.sentinel.av.core.QuarantineManager;
 import com.sentinel.av.core.RealTimeMonitor;
 import com.sentinel.av.core.canary.RansomwareCanaryGuard;
+import com.sentinel.av.ui.components.CyberButton;
 import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.IconUtils;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
@@ -32,22 +34,26 @@ public class MainFrame extends JFrame {
     private AttackCoveragePanel attackPanel;
     private LogsPanel logsPanel;
 
-    private JButton navDashBtn;
-    private JButton navScanBtn;
-    private JButton navProcBtn;
-    private JButton navGuardBtn;
-    private JButton navQuarBtn;
-    private JButton navSigBtn;
-    private JButton navAttackBtn;
-    private JButton navLogBtn;
-
-    /** cardName -> navigation button, used by highlight + shortcuts. */
-    private final Map<String, JButton> navButtons = new LinkedHashMap<>();
+    private final Map<String, NavEntry> navEntries = new LinkedHashMap<>();
 
     private JLabel statusShieldLabel;
     private JLabel statusGuardLabel;
     private JLabel statusQuarantineLabel;
     private JLabel statusMemoryLabel;
+
+    /** Descriptor for one navigation item. */
+    private static final class NavEntry {
+        final String cardName;
+        final IconUtils.IconType icon;
+        final String label;
+        CyberButton button;
+
+        NavEntry(String cardName, IconUtils.IconType icon, String label) {
+            this.cardName = cardName;
+            this.icon = icon;
+            this.label = label;
+        }
+    }
 
     public MainFrame() {
         setTitle("SentinelAV — Cyber Security, EDR & Threat Intelligence Suite");
@@ -59,7 +65,7 @@ public class MainFrame extends JFrame {
                 confirmExit();
             }
         });
-        setSize(1260, 800);
+        setSize(1280, 820);
         setMinimumSize(new Dimension(1080, 700));
         setLocationRelativeTo(null);
 
@@ -69,70 +75,68 @@ public class MainFrame extends JFrame {
         RealTimeMonitor.getInstance().startMonitoring();
         RansomwareCanaryGuard.getInstance().deployCanaries();
 
-        ActivityLogger.getInstance().system("AppInit", "SentinelAV Cyber Security Suite initialized with MITRE ATT&CK Engine.");
+        ActivityLogger.getInstance().system("AppInit", "SentinelAV Cyber Security Suite initialized.");
     }
 
     private void initComponents() {
         JPanel rootPanel = new JPanel(new BorderLayout());
         rootPanel.setBackground(CyberPalette.BACKGROUND);
 
-        // --- Left Sidebar Navigation ---
+        // ------------------------------------------------------------------ Sidebar
         JPanel sidebar = new JPanel(new BorderLayout());
-        sidebar.setPreferredSize(new Dimension(250, 0));
-        sidebar.setBackground(new Color(15, 17, 22));
-        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(40, 46, 58)));
+        sidebar.setPreferredSize(new Dimension(240, 0));
+        sidebar.setBackground(new Color(13, 18, 34));
+        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, CyberPalette.BORDER));
 
-        // App Brand Header
-        JPanel brandPanel = new JPanel(new BorderLayout(12, 5));
+        // Brand header
+        JPanel brandPanel = new JPanel(new BorderLayout(12, 6));
         brandPanel.setOpaque(false);
-        brandPanel.setBorder(new javax.swing.border.EmptyBorder(25, 20, 25, 20));
+        brandPanel.setBorder(new EmptyBorder(26, 20, 24, 20));
 
-        JLabel brandIcon = new JLabel("🛡️");
-        brandIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 32));
-
+        JLabel brandIcon = new JLabel(IconUtils.getIcon(IconUtils.IconType.SHIELD_OK, CyberPalette.ACCENT, 32));
         JLabel brandTitle = new JLabel("SENTINEL AV");
-        brandTitle.setFont(new Font("Segoe UI", Font.BOLD, 19));
-        brandTitle.setForeground(Color.WHITE);
+        brandTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        brandTitle.setForeground(CyberPalette.TEXT_PRIMARY);
+        JLabel brandSub = new JLabel("v" + Version.VERSION + " · EDR Engine");
+        brandSub.setFont(CyberPalette.FONT_CAPTION);
+        brandSub.setForeground(CyberPalette.TEXT_MUTED);
 
-        JLabel brandSub = new JLabel("v" + Version.VERSION + " EDR & Threat Engine");
-        brandSub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        brandSub.setForeground(new Color(16, 185, 129));
-
-        JPanel brandTextGroup = new JPanel(new GridLayout(2, 1));
-        brandTextGroup.setOpaque(false);
-        brandTextGroup.add(brandTitle);
-        brandTextGroup.add(brandSub);
+        JPanel brandText = new JPanel(new GridLayout(2, 1, 0, 1));
+        brandText.setOpaque(false);
+        brandText.add(brandTitle);
+        brandText.add(brandSub);
 
         brandPanel.add(brandIcon, BorderLayout.WEST);
-        brandPanel.add(brandTextGroup, BorderLayout.CENTER);
+        brandPanel.add(brandText, BorderLayout.CENTER);
 
-        // Nav Buttons
-        JPanel navMenu = new JPanel(new GridLayout(8, 1, 5, 5));
+        // Navigation menu
+        JPanel navMenu = new JPanel();
+        navMenu.setLayout(new BoxLayout(navMenu, BoxLayout.Y_AXIS));
         navMenu.setOpaque(false);
-        navMenu.setBorder(new javax.swing.border.EmptyBorder(10, 12, 10, 12));
+        navMenu.setBorder(new EmptyBorder(8, 8, 8, 8));
 
-        navDashBtn = createNavButton("📊  Dashboard Overview", "DASHBOARD");
-        navScanBtn = createNavButton("🔍  Malware Scanner", "SCANNER");
-        navProcBtn = createNavButton("⚙️  Process Inspector", "PROCESSES");
-        navGuardBtn = createNavButton("📡  Real-Time Guard", "GUARD");
-        navQuarBtn = createNavButton("🔒  Quarantine Vault", "QUARANTINE");
-        navSigBtn = createNavButton("🧬  YARA & Definitions", "SIGNATURES");
-        navAttackBtn = createNavButton("🎯  MITRE ATT&CK Matrix", "ATTACK");
-        navLogBtn = createNavButton("📜  Security Audit Logs", "LOGS");
+        addNavItem(navMenu, "DASHBOARD", IconUtils.IconType.HOME, "Dashboard");
+        addNavItem(navMenu, "SCANNER", IconUtils.IconType.SCAN, "Malware Scanner");
+        addNavItem(navMenu, "PROCESSES", IconUtils.IconType.ADVANCED, "Process Inspector");
+        addNavItem(navMenu, "GUARD", IconUtils.IconType.PROTECTION, "Real-Time Guard");
+        addNavItem(navMenu, "QUARANTINE", IconUtils.IconType.QUARANTINE, "Quarantine Vault");
+        addNavItem(navMenu, "SIGNATURES", IconUtils.IconType.HISTORY, "YARA & Definitions");
+        addNavItem(navMenu, "ATTACK", IconUtils.IconType.ADVANCED, "MITRE ATT&CK Matrix");
+        addNavItem(navMenu, "LOGS", IconUtils.IconType.HISTORY, "Security Audit Logs");
 
-        navMenu.add(navDashBtn);
-        navMenu.add(navScanBtn);
-        navMenu.add(navProcBtn);
-        navMenu.add(navGuardBtn);
-        navMenu.add(navQuarBtn);
-        navMenu.add(navSigBtn);
-        navMenu.add(navAttackBtn);
-        navMenu.add(navLogBtn);
+        JPanel navScrollWrap = new JPanel(new BorderLayout());
+        navScrollWrap.setOpaque(false);
+        JScrollPane navScroll = new JScrollPane(navMenu);
+        navScroll.setOpaque(false);
+        navScroll.getViewport().setOpaque(false);
+        navScroll.setBorder(BorderFactory.createEmptyBorder());
+        navScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        navScrollWrap.add(navScroll, BorderLayout.CENTER);
 
         sidebar.add(brandPanel, BorderLayout.NORTH);
-        sidebar.add(navMenu, BorderLayout.CENTER);
+        sidebar.add(navScrollWrap, BorderLayout.CENTER);
 
-        // --- Center Content Views ---
+        // ------------------------------------------------------------------ Content
         dashboardPanel = new DashboardPanel(this);
         scannerPanel = new ScannerPanel(this);
         processPanel = new ProcessPanel(this);
@@ -160,30 +164,39 @@ public class MainFrame extends JFrame {
         selectSection("DASHBOARD");
         refreshStatusBar();
 
-        // Keep the footer status live.
         new Timer(2000, e -> refreshStatusBar()).start();
     }
 
-    // ------------------------------------------------------------ navigation
-
-    private JButton createNavButton(String text, String cardName) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setForeground(new Color(180, 195, 215));
-        btn.setBackground(new Color(15, 17, 22));
-        btn.setFocusPainted(false);
+    /** Adds one navigation row to the sidebar. */
+    private void addNavItem(JPanel navMenu, String cardName, IconUtils.IconType icon, String label) {
+        NavEntry entry = new NavEntry(cardName, icon, label);
+        CyberButton btn = new CyberButton("  " + label, IconUtils.getIcon(icon, CyberPalette.TEXT_SECONDARY, 18),
+                CyberButton.GHOST);
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        btn.setFont(CyberPalette.FONT_BODY_BOLD);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setBorder(new javax.swing.border.EmptyBorder(12, 16, 12, 16));
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setIconTextGap(10);
         btn.addActionListener(e -> selectSection(cardName));
-        navButtons.put(cardName, btn);
-        return btn;
+        entry.button = btn;
+        navEntries.put(cardName, entry);
+        navMenu.add(btn);
+        navMenu.add(Box.createRigidArea(new Dimension(0, 6)));
     }
 
-    /** Switches the center view, highlights its nav entry and refreshes live data. */
+    /** Switches the center view and updates the active navigation highlight. */
     private void selectSection(String cardName) {
         cardLayout.show(mainContentPanel, cardName);
-        highlightNavButton(navButtons.get(cardName));
+
+        for (NavEntry entry : navEntries.values()) {
+            boolean active = entry.cardName.equals(cardName);
+            entry.button.setVariant(active ? CyberButton.PRIMARY : CyberButton.GHOST);
+            if (active) {
+                entry.button.setIcon(IconUtils.getIcon(entry.icon, CyberPalette.TEXT_PRIMARY, 18));
+            } else {
+                entry.button.setIcon(IconUtils.getIcon(entry.icon, CyberPalette.TEXT_SECONDARY, 18));
+            }
+        }
 
         switch (cardName) {
             case "PROCESSES" -> processPanel.refreshProcesses();
@@ -194,24 +207,12 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private void highlightNavButton(JButton selectedBtn) {
-        for (JButton b : navButtons.values()) {
-            if (b == selectedBtn) {
-                b.setBackground(new Color(30, 36, 48));
-                b.setForeground(new Color(59, 130, 246));
-            } else {
-                b.setBackground(new Color(15, 17, 22));
-                b.setForeground(new Color(180, 195, 215));
-            }
-        }
-    }
-
-    /** Ctrl+1..8 (Win/Linux) / Cmd+1..8 (macOS) jump straight to a section. */
+    /** Ctrl+1..8 jump straight to a section. */
     private void registerNavShortcuts() {
         JRootPane rootPane = getRootPane();
         int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
         int digit = KeyEvent.VK_1;
-        for (String cardName : navButtons.keySet()) {
+        for (String cardName : navEntries.keySet()) {
             String id = "NAV-" + cardName;
             rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
                     .put(KeyStroke.getKeyStroke(digit, mask), id);
@@ -229,15 +230,21 @@ public class MainFrame extends JFrame {
 
     private JPanel buildStatusBar() {
         JPanel statusBar = new JPanel(new BorderLayout(20, 0));
-        statusBar.setBackground(new Color(15, 17, 22));
+        statusBar.setBackground(new Color(13, 18, 34));
         statusBar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(40, 46, 58)),
-                new javax.swing.border.EmptyBorder(6, 16, 6, 16)));
+                BorderFactory.createMatteBorder(1, 0, 0, 0, CyberPalette.BORDER),
+                new EmptyBorder(6, 16, 6, 16)));
 
         statusShieldLabel = new JLabel();
         statusGuardLabel = new JLabel();
         statusQuarantineLabel = new JLabel();
         statusMemoryLabel = new JLabel();
+
+        JLabel[] labels = {statusShieldLabel, statusGuardLabel, statusQuarantineLabel};
+        for (JLabel l : labels) {
+            l.setFont(CyberPalette.FONT_SMALL);
+        }
+        statusMemoryLabel.setFont(CyberPalette.FONT_SMALL);
 
         JPanel leftGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 0));
         leftGroup.setOpaque(false);
@@ -255,15 +262,14 @@ public class MainFrame extends JFrame {
         long maxMem = Runtime.getRuntime().maxMemory() / (1024 * 1024);
         long usedMem = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024);
 
-        statusShieldLabel.setText(shield ? "🛡 Shield: ACTIVE" : "🛡 Shield: OFF");
-        statusShieldLabel.setForeground(shield ? new Color(110, 230, 150) : new Color(255, 170, 80));
-        statusGuardLabel.setText(canary ? "🦆 Tripwire: ARMED" : "🦆 Tripwire: DISARMED");
-        statusGuardLabel.setForeground(canary
-                ? new Color(160, 175, 195) : new Color(255, 170, 80));
-        statusQuarantineLabel.setText("🔒 Vault: " + QuarantineManager.getInstance().getQuarantineCount());
-        statusQuarantineLabel.setForeground(new Color(160, 175, 195));
+        statusShieldLabel.setText(shield ? "\u2692 Shield: ACTIVE" : "\u2692 Shield: OFF");
+        statusShieldLabel.setForeground(shield ? CyberPalette.SAFE : CyberPalette.WARNING);
+        statusGuardLabel.setText(canary ? "\uD83E\uDD86 Tripwire: ARMED" : "\uD83E\uDD86 Tripwire: DISARMED");
+        statusGuardLabel.setForeground(canary ? CyberPalette.TEXT_PRIMARY : CyberPalette.WARNING);
+        statusQuarantineLabel.setText("\uD83D\uDD12 Vault: " + QuarantineManager.getInstance().getQuarantineCount());
+        statusQuarantineLabel.setForeground(CyberPalette.TEXT_SECONDARY);
         statusMemoryLabel.setText(usedMem + " MB / " + maxMem + " MB");
-        statusMemoryLabel.setForeground(new Color(140, 155, 175));
+        statusMemoryLabel.setForeground(CyberPalette.TEXT_MUTED);
     }
 
     // ----------------------------------------------------------------- exit
@@ -271,7 +277,6 @@ public class MainFrame extends JFrame {
     /** Warns the user before tearing down any live protection. */
     private void confirmExit() {
         boolean shieldActive = RealTimeMonitor.getInstance().isRunning();
-
         Object[] options = {"Exit", "Cancel"};
         String message = shieldActive
                 ? "The real-time shield and ransomware tripwire will stop.\nExit SentinelAV?"

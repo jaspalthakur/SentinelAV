@@ -2,12 +2,15 @@ package com.sentinel.av.ui;
 
 import com.sentinel.av.core.ActivityLogger;
 import com.sentinel.av.core.ProcessInspector;
+import com.sentinel.av.ui.components.CyberButton;
+import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.StatusBadge;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.io.File;
 import java.util.List;
@@ -32,19 +35,14 @@ public class ProcessPanel extends JPanel {
 
     private void initComponents() {
         // --- Top Header Card ---
-        JPanel topCard = new JPanel(new BorderLayout(10, 10));
-        topCard.setBackground(CyberPalette.SURFACE);
-        topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+        CyberCard topCard = new CyberCard(CyberPalette.BORDER);
 
-        JLabel titleLabel = new JLabel("⚙️ System Process & Memory Inspector");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        JLabel titleLabel = new JLabel("\u2699\uFE0F  System Process & Memory Inspector");
+        titleLabel.setFont(CyberPalette.FONT_TITLE_SMALL);
         titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         countLabel = new JLabel("Active Processes: 0");
-        countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        countLabel.setFont(CyberPalette.FONT_SMALL);
         countLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         JPanel titleGroup = new JPanel(new GridLayout(2, 1, 4, 4));
@@ -56,25 +54,21 @@ public class ProcessPanel extends JPanel {
         btnRow.setOpaque(false);
 
         filterBox = new JComboBox<>(new String[]{"ALL", "HIGH / CRITICAL ONLY", "MEDIUM & ABOVE"});
-        filterBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        filterBox.setFont(CyberPalette.FONT_SMALL);
+        filterBox.setBackground(CyberPalette.INPUT_BG);
+        filterBox.setForeground(CyberPalette.TEXT_PRIMARY);
         filterBox.addActionListener(e -> refreshProcesses());
 
-        JButton refreshBtn = new JButton("🔄 Refresh List");
-        refreshBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        refreshBtn.setBackground(new Color(45, 55, 70));
-        refreshBtn.setForeground(Color.WHITE);
+        CyberButton refreshBtn = new CyberButton("\u27F3  Refresh List", CyberButton.SECONDARY);
+        refreshBtn.setFont(CyberPalette.FONT_SMALL);
         refreshBtn.addActionListener(e -> refreshProcesses());
 
-        JButton scanProcBtn = new JButton("🔍 Scan Process Binary");
-        scanProcBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        scanProcBtn.setBackground(CyberPalette.ACCENT);
-        scanProcBtn.setForeground(Color.WHITE);
+        CyberButton scanProcBtn = new CyberButton("\uD83D\uDD0D  Scan Process Binary", CyberButton.PRIMARY);
+        scanProcBtn.setFont(CyberPalette.FONT_SMALL);
         scanProcBtn.addActionListener(e -> scanSelectedProcess());
 
-        JButton killBtn = new JButton("🛑 Terminate Process");
-        killBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        killBtn.setBackground(new Color(180, 50, 50));
-        killBtn.setForeground(Color.WHITE);
+        CyberButton killBtn = new CyberButton("\uD83D\uDDD1  Terminate Process", CyberButton.DANGER);
+        killBtn.setFont(CyberPalette.FONT_SMALL);
         killBtn.addActionListener(e -> terminateSelectedProcess());
 
         btnRow.add(new JLabel("Filter:"));
@@ -87,29 +81,43 @@ public class ProcessPanel extends JPanel {
         topCard.add(btnRow, BorderLayout.EAST);
 
         // --- Center Table Card ---
-        JPanel tableCard = new JPanel(new BorderLayout(10, 10));
-        tableCard.setBackground(CyberPalette.SURFACE);
-        tableCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+        CyberCard tableCard = new CyberCard(CyberPalette.BORDER);
 
         String[] cols = {"PID", "Process Name", "Risk Level", "Risk Reason", "Executable Path", "Command Line"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
-        processTable = new JTable(tableModel);
-        processTable.setBackground(CyberPalette.BACKGROUND);
+        processTable = new JTable(tableModel) {
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+                Component c = super.prepareRenderer(renderer, row, column);
+                if (c instanceof JComponent) {
+                    boolean isSelected = isRowSelected(row);
+                    if (isSelected) {
+                        c.setBackground(CyberPalette.BORDER_ACTIVE);
+                    } else {
+                        c.setBackground(row % 2 == 0 ? CyberPalette.BACKGROUND
+                                : new Color(15, 22, 40));
+                    }
+                }
+                return c;
+            }
+        };
         processTable.setForeground(CyberPalette.TEXT_PRIMARY);
         processTable.setGridColor(CyberPalette.BORDER);
-        processTable.setRowHeight(28);
-        processTable.setFont(new Font("Consolas", Font.PLAIN, 12));
-        processTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        processTable.setRowHeight(30);
+        processTable.setFont(CyberPalette.FONT_CODE);
+        processTable.getTableHeader().setFont(CyberPalette.FONT_BODY_BOLD);
         processTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
         processTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        processTable.getTableHeader().setReorderingAllowed(false);
         processTable.setAutoCreateRowSorter(true);
+        processTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        processTable.setIntercellSpacing(new Dimension(0, 1));
 
         // Risk Level Cell Renderer
         processTable.getColumnModel().getColumn(2).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
@@ -121,6 +129,7 @@ public class ProcessPanel extends JPanel {
 
         JScrollPane scrollPane = new JScrollPane(processTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
+        scrollPane.getViewport().setBackground(CyberPalette.BACKGROUND);
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 
@@ -169,7 +178,8 @@ public class ProcessPanel extends JPanel {
     private void scanSelectedProcess() {
         int selectedRow = selectedModelRow();
         if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Please select a process from the table.", "No Process Selected", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a process from the table.", "No Process Selected",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -179,17 +189,20 @@ public class ProcessPanel extends JPanel {
             if (targetFile.exists()) {
                 mainFrame.switchToScanTabWithFolder(targetFile);
             } else {
-                JOptionPane.showMessageDialog(this, "Executable file path not accessible: " + pathStr, "File Not Found", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Executable file path not accessible: " + pathStr,
+                        "File Not Found", JOptionPane.WARNING_MESSAGE);
             }
         } else {
-            JOptionPane.showMessageDialog(this, "Process path is system protected or undisclosed.", "Scan Unavailable", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Process path is system protected or undisclosed.",
+                    "Scan Unavailable", JOptionPane.WARNING_MESSAGE);
         }
     }
 
     private void terminateSelectedProcess() {
         int selectedRow = selectedModelRow();
         if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Please select a process to terminate.", "No Process Selected", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a process to terminate.", "No Process Selected",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -204,11 +217,15 @@ public class ProcessPanel extends JPanel {
 
         if (confirm == 0) {
             if (ProcessInspector.terminateProcess(pid)) {
-                ActivityLogger.getInstance().warning("ProcessInspector", "Terminated process " + name + " (PID: " + pid + ")");
+                ActivityLogger.getInstance().warning("ProcessInspector",
+                    "Terminated process " + name + " (PID: " + pid + ")");
                 refreshProcesses();
-                JOptionPane.showMessageDialog(this, "Process terminated successfully.", "Terminated", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Process terminated successfully.", "Terminated",
+                        JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(this, "Failed to terminate process PID " + pid + " (Access Denied or Process Exited).", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                    "Failed to terminate process PID " + pid + " (Access Denied or Process Exited).", "Error",
+                    JOptionPane.ERROR_MESSAGE);
             }
         }
     }

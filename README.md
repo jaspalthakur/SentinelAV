@@ -1,12 +1,22 @@
-# SentinelAV v3.7 — EDR & MITRE ATT&CK Threat Engine
+# SentinelAV v3.8 — EDR & MITRE ATT&CK Threat Engine
 
 [![Build and Test](https://github.com/jaspalthakur/SentinelAV/actions/workflows/build.yml/badge.svg)](https://github.com/jaspalthakur/SentinelAV/actions/workflows/build.yml)
 
-**SentinelAV** is an open-source inspired Cyber Security / EDR (Endpoint Detection and Response) suite written in Java 21. It combines a pluggable detection-engine architecture, MITRE ATT&CK technique mapping, ransomware canary honeypots, safe archive inspection, an AES-256-GCM encrypted quarantine vault, and STIX 2.1 report generation behind a dark FlatLaf desktop UI and a scriptable headless CLI.
+**SentinelAV** is an open-source inspired Cyber Security / EDR (Endpoint Detection and Response) suite written in Java 21. It combines a pluggable detection-engine architecture, MITRE ATT&CK technique mapping, ransomware canary honeypots, safe archive inspection, an AES-256-GCM encrypted quarantine vault, and STIX 2.1 report generation behind a polished dark FlatLaf desktop UI and a scriptable headless CLI.
 
 ---
 
-## What's new in v3.7 (UI & UX polish)
+## What's new in v3.8 (UI & UX overhaul)
+
+- **Modern dark theme** — every screen now draws from a single expanded `CyberPalette` (navy surfaces, consistent borders, focus rings, hover states, and semantic severity colors).
+- **Themed buttons (`CyberButton`)** — primary, secondary, danger, and ghost variants with built-in hover/pressed/disabled states for a consistent, tactile feel.
+- **Polished cards & badges** — `CyberCard` with subtle hover elevation; `StatCard` metric cards with hover lift; pill-shaped `StatusBadge` for risk levels and scan status.
+- **Redesigned navigation** — icon-based sidebar with an active-state accent bar, `Ctrl+1`…`Ctrl+8` keyboard shortcuts, and a live footer status bar (shield, tripwire, vault, memory).
+- **Data tables** — zebra striping, sortable columns, consistent row heights, and full-path tooltips across Scanner, Quarantine, Signatures, Processes, Logs, and ATT&CK views.
+- **Responsive layouts** — stat cards and dashboard widgets wrap on narrower windows instead of using rigid fixed grids.
+- **Safer destructive actions** — permanent delete / terminate confirmations default to *Cancel*; clean exit stops monitoring, disarms the tripwire, flushes logs, and removes decoys.
+
+### What's new in v3.7
 
 - **Unified dark theme** — every screen now draws from the single `CyberPalette` (navy surfaces, consistent borders and text tones) instead of mixing two card styles.
 - **Real scan progress** — the progress bar now shows the true `N / M files (P%)` based on the planned scan size instead of a fake modulo percentage.
@@ -133,7 +143,7 @@ if ($LASTEXITCODE -eq 1) { Write-Host "Threats detected" }
 ## Test suite results
 
 ```text
-=== SentinelAV 3.6.0 - EDR & MITRE ATT&CK Threat Engine - Headless Test Suite ===
+=== SentinelAV 3.8.0 - EDR & MITRE ATT&CK Threat Engine - Headless Test Suite ===
 [PASS] Hash utilities (MD5 + SHA-256, single pass)
 [PASS] Magic-byte detection (including 2-byte MZ)
 [PASS] FileContext lazy hashing

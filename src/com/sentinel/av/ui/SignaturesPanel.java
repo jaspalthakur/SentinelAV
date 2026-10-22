@@ -3,12 +3,16 @@ package com.sentinel.av.ui;
 import com.sentinel.av.core.ActivityLogger;
 import com.sentinel.av.core.SignatureDatabase;
 import com.sentinel.av.model.VirusSignature;
-import com.sentinel.av.ui.components.StatusBadge;
+import com.sentinel.av.ui.components.CyberButton;
+import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
+import com.sentinel.av.ui.components.StatusBadge;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.io.File;
 import java.nio.file.Files;
@@ -36,19 +40,14 @@ public class SignaturesPanel extends JPanel {
 
     private void initComponents() {
         // --- Top Header Card ---
-        JPanel topCard = new JPanel(new BorderLayout(10, 10));
-        topCard.setBackground(CyberPalette.SURFACE);
-        topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+        CyberCard topCard = new CyberCard(CyberPalette.BORDER);
 
-        JLabel titleLabel = new JLabel("🧬 Virus Signature Database & Definitions");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setForeground(Color.WHITE);
+        JLabel titleLabel = new JLabel("\uD83E\uDCDC  Virus Signature Database & Definitions");
+        titleLabel.setFont(CyberPalette.FONT_TITLE_SMALL);
+        titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         countLabel = new JLabel("Total Loaded Signatures: 0");
-        countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        countLabel.setFont(CyberPalette.FONT_SMALL);
         countLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         JPanel titleContainer = new JPanel(new GridLayout(2, 1, 4, 4));
@@ -59,16 +58,12 @@ public class SignaturesPanel extends JPanel {
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         btnRow.setOpaque(false);
 
-        JButton addSigBtn = new JButton("➕ Add Custom Signature");
-        addSigBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        addSigBtn.setBackground(CyberPalette.ACCENT);
-        addSigBtn.setForeground(Color.WHITE);
+        CyberButton addSigBtn = new CyberButton("\u2795  Add Custom Signature", CyberButton.PRIMARY);
+        addSigBtn.setFont(CyberPalette.FONT_SMALL);
         addSigBtn.addActionListener(e -> showAddSignatureDialog());
 
-        JButton generateEicarBtn = new JButton("🧪 Create EICAR Test File");
-        generateEicarBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        generateEicarBtn.setBackground(new Color(45, 130, 75));
-        generateEicarBtn.setForeground(Color.WHITE);
+        CyberButton generateEicarBtn = new CyberButton("\uD83E\uDEAA  Create EICAR Test File", CyberButton.SECONDARY);
+        generateEicarBtn.setFont(CyberPalette.FONT_SMALL);
         generateEicarBtn.addActionListener(e -> generateEicarFile());
 
         btnRow.add(addSigBtn);
@@ -78,28 +73,43 @@ public class SignaturesPanel extends JPanel {
         topCard.add(btnRow, BorderLayout.EAST);
 
         // --- Center Table Card ---
-        JPanel tableCard = new JPanel(new BorderLayout(10, 10));
-        tableCard.setBackground(CyberPalette.SURFACE);
-        tableCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+        CyberCard tableCard = new CyberCard(CyberPalette.BORDER);
 
         String[] cols = {"ID", "Threat Name", "Type", "Hash / Pattern", "Severity", "Description"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
-        signaturesTable = new JTable(tableModel);
-        signaturesTable.setBackground(CyberPalette.BACKGROUND);
-        signaturesTable.setForeground(Color.WHITE);
+        signaturesTable = new JTable(tableModel) {
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+                Component c = super.prepareRenderer(renderer, row, column);
+                if (c instanceof JComponent) {
+                    boolean isSelected = isRowSelected(row);
+                    if (isSelected) {
+                        c.setBackground(CyberPalette.BORDER_ACTIVE);
+                    } else {
+                        c.setBackground(row % 2 == 0 ? CyberPalette.BACKGROUND
+                                : new Color(15, 22, 40));
+                    }
+                }
+                return c;
+            }
+        };
+        signaturesTable.setForeground(CyberPalette.TEXT_PRIMARY);
         signaturesTable.setGridColor(CyberPalette.BORDER);
-        signaturesTable.setRowHeight(28);
-        signaturesTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        signaturesTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        signaturesTable.setRowHeight(30);
+        signaturesTable.setFont(CyberPalette.FONT_BODY);
+        signaturesTable.getTableHeader().setFont(CyberPalette.FONT_BODY_BOLD);
         signaturesTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
         signaturesTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        signaturesTable.getTableHeader().setReorderingAllowed(false);
+        signaturesTable.setAutoCreateRowSorter(true);
+        signaturesTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        signaturesTable.setIntercellSpacing(new Dimension(0, 1));
 
         // Severity renderer
         signaturesTable.getColumnModel().getColumn(4).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
@@ -111,6 +121,7 @@ public class SignaturesPanel extends JPanel {
 
         JScrollPane scrollPane = new JScrollPane(signaturesTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
+        scrollPane.getViewport().setBackground(CyberPalette.BACKGROUND);
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 
@@ -141,7 +152,7 @@ public class SignaturesPanel extends JPanel {
         JComboBox<VirusSignature.Severity> severityBox = new JComboBox<>(VirusSignature.Severity.values());
         JTextField descField = new JTextField();
 
-        JPanel panel = new JPanel(new GridLayout(5, 2, 8, 8));
+        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
         panel.add(new JLabel("Threat Name:"));
         panel.add(nameField);
         panel.add(new JLabel("Type:"));
@@ -153,7 +164,19 @@ public class SignaturesPanel extends JPanel {
         panel.add(new JLabel("Description:"));
         panel.add(descField);
 
-        int res = JOptionPane.showConfirmDialog(this, panel, "Add New Virus Definition", JOptionPane.OK_CANCEL_OPTION);
+        for (Component c : panel.getComponents()) {
+            if (c instanceof JLabel) {
+                ((JLabel) c).setForeground(CyberPalette.TEXT_PRIMARY);
+                ((JLabel) c).setFont(CyberPalette.FONT_BODY);
+            } else if (c instanceof JComboBox<?> || c instanceof JTextField) {
+                c.setFont(CyberPalette.FONT_BODY);
+                c.setBackground(CyberPalette.INPUT_BG);
+                c.setForeground(CyberPalette.TEXT_PRIMARY);
+            }
+        }
+
+        int res = JOptionPane.showConfirmDialog(this, panel, "Add New Virus Definition",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (res == JOptionPane.OK_OPTION) {
             String name = nameField.getText().trim();
             String type = (String) typeBox.getSelectedItem();
@@ -162,7 +185,8 @@ public class SignaturesPanel extends JPanel {
             String desc = descField.getText().trim();
 
             if (name.isEmpty() || value.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Name and Hash/Pattern fields cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Name and Hash/Pattern fields cannot be empty.", "Error",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -178,14 +202,17 @@ public class SignaturesPanel extends JPanel {
             refreshTable();
             mainFrame.updateDashboardStats();
             ActivityLogger.getInstance().info("Signatures", "Added custom signature: " + name);
-            JOptionPane.showMessageDialog(this, "Signature added successfully!", "Added", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Signature added successfully!", "Added",
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
     private void generateEicarFile() {
         try {
             File desktop = new File(System.getProperty("user.home"), "Desktop");
-            if (!desktop.exists()) desktop = new File(System.getProperty("user.home"));
+            if (!desktop.exists()) {
+                desktop = new File(System.getProperty("user.home"));
+            }
 
             File eicarFile = new File(desktop, "eicar_test_virus.txt");
             String eicarContent = "X5O!P%@AP[4\\PZX54(P^)7CC)$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
@@ -193,15 +220,16 @@ public class SignaturesPanel extends JPanel {
             Files.write(eicarFile.toPath(), eicarContent.getBytes());
 
             JOptionPane.showMessageDialog(this,
-                "EICAR test malware file generated at:\n" + eicarFile.getAbsolutePath() + 
-                "\n\nYou can now run a scan or use Real-Time Guard to test detection!",
-                "Safe EICAR Generated",
-                JOptionPane.INFORMATION_MESSAGE);
+                "EICAR test malware file generated at:\n" + eicarFile.getAbsolutePath()
+                    + "\n\nYou can now run a scan or use Real-Time Guard to test detection!",
+                "Safe EICAR Generated", JOptionPane.INFORMATION_MESSAGE);
 
-            ActivityLogger.getInstance().info("Signatures", "Generated EICAR test file at " + eicarFile.getAbsolutePath());
+            ActivityLogger.getInstance().info("Signatures",
+                "Generated EICAR test file at " + eicarFile.getAbsolutePath());
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Failed to create EICAR test file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Failed to create EICAR test file: " + ex.getMessage(), "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 }

@@ -5,7 +5,9 @@ import com.sentinel.av.core.QuarantineManager;
 import com.sentinel.av.core.RealTimeMonitor;
 import com.sentinel.av.core.SignatureDatabase;
 import com.sentinel.av.model.ActivityLog;
+import com.sentinel.av.model.ScanResult;
 import com.sentinel.av.ui.components.AnalyticsChartPanel;
+import com.sentinel.av.ui.components.CyberButton;
 import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.SecurityGaugePanel;
@@ -14,6 +16,9 @@ import com.sentinel.av.ui.components.StatCard;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEventListener, ActivityLogger.LogListener {
 
@@ -21,8 +26,8 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
     private JLabel statusTitle;
     private JLabel statusSubtext;
     private JPanel heroBanner;
-    private JButton shieldToggleBtn;
-    
+    private CyberButton shieldToggleBtn;
+
     private SecurityGaugePanel gaugePanel;
     private StatCard signaturesCard;
     private StatCard realTimeCard;
@@ -54,11 +59,10 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
     private void initComponents() {
         // --- Top Hero Banner & Health Gauge ---
         heroBanner = new JPanel(new BorderLayout(20, 15));
-        heroBanner.setBackground(new Color(28, 42, 35));
+        heroBanner.setBackground(CyberPalette.SURFACE_ACTIVE);
         heroBanner.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(45, 140, 80), 1),
-            new EmptyBorder(20, 25, 20, 25)
-        ));
+            BorderFactory.createLineBorder(CyberPalette.SAFE, 1),
+            new EmptyBorder(20, 25, 20, 25)));
 
         // Left Score Gauge
         gaugePanel = new SecurityGaugePanel();
@@ -68,13 +72,13 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
         JPanel heroTextGroup = new JPanel(new GridLayout(2, 1, 4, 4));
         heroTextGroup.setOpaque(false);
 
-        statusTitle = new JLabel("🛡️ SYSTEM IS FULLY PROTECTED");
-        statusTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        statusTitle.setForeground(new Color(110, 230, 150));
+        statusTitle = new JLabel("\uD83D\uDEA1  SYSTEM IS FULLY PROTECTED");
+        statusTitle.setFont(CyberPalette.FONT_TITLE_LARGE);
+        statusTitle.setForeground(CyberPalette.SAFE);
 
-        statusSubtext = new JLabel("Real-Time Sentinel Guard Active • YARA Heuristic Engine Enabled • Database Up to Date");
-        statusSubtext.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        statusSubtext.setForeground(new Color(180, 210, 190));
+        statusSubtext = new JLabel("Real-Time Sentinel Guard Active \u2022 YARA Heuristic Engine Enabled \u2022 Database Up to Date");
+        statusSubtext.setFont(CyberPalette.FONT_BODY);
+        statusSubtext.setForeground(CyberPalette.TEXT_SECONDARY);
 
         heroTextGroup.add(statusTitle);
         heroTextGroup.add(statusSubtext);
@@ -83,18 +87,12 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
         JPanel heroRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         heroRight.setOpaque(false);
 
-        JButton quickScanBtn = new JButton("⚡ Quick Scan");
-        quickScanBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        quickScanBtn.setBackground(new Color(16, 185, 129));
-        quickScanBtn.setForeground(Color.WHITE);
-        quickScanBtn.setFocusPainted(false);
+        CyberButton quickScanBtn = new CyberButton("\u26A1  Quick Scan", CyberButton.PRIMARY);
+        quickScanBtn.setFont(CyberPalette.FONT_BODY_BOLD);
         quickScanBtn.addActionListener(e -> mainFrame.switchToScanTabAndStartQuick());
 
-        shieldToggleBtn = new JButton("Turn Shield OFF");
-        shieldToggleBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        shieldToggleBtn.setBackground(new Color(45, 55, 70));
-        shieldToggleBtn.setForeground(Color.WHITE);
-        shieldToggleBtn.setFocusPainted(false);
+        shieldToggleBtn = new CyberButton("Turn Shield OFF", CyberButton.DANGER);
+        shieldToggleBtn.setFont(CyberPalette.FONT_SMALL);
         shieldToggleBtn.addActionListener(e -> toggleShield());
 
         heroRight.add(quickScanBtn);
@@ -108,29 +106,37 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
         heroBanner.add(gaugePanel, BorderLayout.WEST);
         heroBanner.add(centerHeroContent, BorderLayout.CENTER);
 
-        // --- Center: 4 Stat Cards Grid ---
-        JPanel statsPanel = new JPanel(new GridLayout(1, 4, 15, 15));
+        // --- Center: 4 Stat Cards Grid (wraps on narrow windows) ---
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         statsPanel.setOpaque(false);
 
-        signaturesCard = new StatCard("VIRUS DEFINITIONS", String.valueOf(SignatureDatabase.getInstance().getSignatureCount()), "MD5, SHA-256 & YARA Rules", new Color(59, 130, 246));
-        realTimeCard = new StatCard("REAL-TIME SHIELD", "ACTIVE", "Guarding Downloads & Desktop", new Color(16, 185, 129));
-        quarantineCard = new StatCard("QUARANTINE VAULT", String.valueOf(QuarantineManager.getInstance().getQuarantineCount()), "XOR Encrypted Storage", new Color(168, 85, 247));
-        threatsCard = new StatCard("THREATS CAUGHT", "0", "Total threats intercepted", new Color(239, 68, 68));
+        signaturesCard = new StatCard("VIRUS DEFINITIONS",
+            String.valueOf(SignatureDatabase.getInstance().getSignatureCount()),
+            "MD5, SHA-256 & YARA Rules", CyberPalette.ACCENT);
+        realTimeCard = new StatCard("REAL-TIME SHIELD", "ACTIVE",
+            "Guarding Downloads & Desktop", CyberPalette.SAFE);
+        quarantineCard = new StatCard("QUARANTINE VAULT",
+            String.valueOf(QuarantineManager.getInstance().getQuarantineCount()),
+            "AES-256 Encrypted Storage", CyberPalette.PURPLE);
+        threatsCard = new StatCard("THREATS CAUGHT", "0",
+            "Total threats intercepted", CyberPalette.THREAT);
 
         statsPanel.add(signaturesCard);
         statsPanel.add(realTimeCard);
         statsPanel.add(quarantineCard);
         statsPanel.add(threatsCard);
 
-        // --- Bottom: Analytics Chart + Security Actions + Recent Log Stream ---
-        JPanel bottomGrid = new JPanel(new GridLayout(1, 3, 15, 15));
+        // --- Bottom: Analytics Chart + Security Actions + Recent Log Stream (wraps on narrow windows) ---
+        JPanel bottomGrid = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         bottomGrid.setOpaque(false);
 
         // Card 1: Security Analytics
         CyberCard analyticsCard = new CyberCard(CyberPalette.BORDER);
-        JLabel chartTitle = new JLabel("📊 Weekly Security Activity");
-        chartTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        chartTitle.setForeground(Color.WHITE);
+        analyticsCard.setHoverEnabled(true);
+        analyticsCard.setPreferredSize(new Dimension(420, 0));
+        JLabel chartTitle = new JLabel("\uD83D\uDCCA  Weekly Security Activity");
+        chartTitle.setFont(CyberPalette.FONT_TITLE_SMALL);
+        chartTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
         AnalyticsChartPanel chart = new AnalyticsChartPanel();
         analyticsCard.add(chartTitle, BorderLayout.NORTH);
@@ -138,39 +144,31 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
 
         // Card 2: Quick Actions
         CyberCard actionsCard = new CyberCard(CyberPalette.BORDER);
-        JLabel qaTitle = new JLabel("⚡ Quick Security Actions");
-        qaTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        qaTitle.setForeground(Color.WHITE);
+        actionsCard.setHoverEnabled(true);
+        actionsCard.setPreferredSize(new Dimension(300, 0));
+        JLabel qaTitle = new JLabel("\u26A1  Quick Security Actions");
+        qaTitle.setFont(CyberPalette.FONT_TITLE_SMALL);
+        qaTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
         JPanel qaBtnGrid = new JPanel(new GridLayout(4, 1, 8, 8));
         qaBtnGrid.setOpaque(false);
 
-        JButton scanDownloadsBtn = new JButton("📁 Scan Downloads Directory");
-        scanDownloadsBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        scanDownloadsBtn.setBackground(new Color(36, 42, 54));
-        scanDownloadsBtn.setForeground(Color.WHITE);
-        scanDownloadsBtn.setFocusPainted(false);
-        scanDownloadsBtn.addActionListener(e -> mainFrame.switchToScanTabWithFolder(new java.io.File(System.getProperty("user.home"), "Downloads")));
+        CyberButton scanDownloadsBtn = new CyberButton("\uD83D\uDCC1  Scan Downloads Directory", CyberButton.SECONDARY);
+        scanDownloadsBtn.setFont(CyberPalette.FONT_SMALL);
+        scanDownloadsBtn.addActionListener(e -> mainFrame.switchToScanTabWithFolder(
+            new File(System.getProperty("user.home"), "Downloads")));
 
-        JButton processInspectBtn = new JButton("⚙️ Open Process & Memory Inspector");
-        processInspectBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        processInspectBtn.setBackground(new Color(36, 42, 54));
-        processInspectBtn.setForeground(Color.WHITE);
-        processInspectBtn.setFocusPainted(false);
+        CyberButton processInspectBtn = new CyberButton("\u2699\uFE0F  Open Process & Memory Inspector",
+            CyberButton.SECONDARY);
+        processInspectBtn.setFont(CyberPalette.FONT_SMALL);
         processInspectBtn.addActionListener(e -> mainFrame.switchToProcessTab());
 
-        JButton createEicarBtn = new JButton("🧪 Generate Safe EICAR Malware Test File");
-        createEicarBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        createEicarBtn.setBackground(new Color(36, 42, 54));
-        createEicarBtn.setForeground(Color.WHITE);
-        createEicarBtn.setFocusPainted(false);
+        CyberButton createEicarBtn = new CyberButton("\uD83E\uDEAA  Generate Safe EICAR Test File", CyberButton.SECONDARY);
+        createEicarBtn.setFont(CyberPalette.FONT_SMALL);
         createEicarBtn.addActionListener(e -> createEicarTestFile());
 
-        JButton viewVaultBtn = new JButton("🔒 Inspect Quarantine Vault");
-        viewVaultBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        viewVaultBtn.setBackground(new Color(36, 42, 54));
-        viewVaultBtn.setForeground(Color.WHITE);
-        viewVaultBtn.setFocusPainted(false);
+        CyberButton viewVaultBtn = new CyberButton("\uD83D\uDD12  Inspect Quarantine Vault", CyberButton.SECONDARY);
+        viewVaultBtn.setFont(CyberPalette.FONT_SMALL);
         viewVaultBtn.addActionListener(e -> mainFrame.switchToQuarantineTab());
 
         qaBtnGrid.add(scanDownloadsBtn);
@@ -183,18 +181,21 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
 
         // Card 3: Live Security Log Feed
         CyberCard activityCard = new CyberCard(CyberPalette.BORDER);
-        JLabel actTitle = new JLabel("📜 Security Event Audit Feed");
-        actTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        actTitle.setForeground(Color.WHITE);
+        activityCard.setHoverEnabled(true);
+        activityCard.setPreferredSize(new Dimension(340, 0));
+        JLabel actTitle = new JLabel("\uD83D\uDCDC  Security Event Audit Feed");
+        actTitle.setFont(CyberPalette.FONT_TITLE_SMALL);
+        actTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
         recentActivityModel = new DefaultListModel<>();
         JList<String> activityList = new JList<>(recentActivityModel);
-        activityList.setBackground(new Color(22, 26, 34));
-        activityList.setForeground(new Color(200, 215, 235));
-        activityList.setFont(new Font("Consolas", Font.PLAIN, 11));
+        activityList.setBackground(CyberPalette.INPUT_BG);
+        activityList.setForeground(CyberPalette.TEXT_PRIMARY);
+        activityList.setFont(CyberPalette.FONT_CODE);
 
         JScrollPane scrollPane = new JScrollPane(activityList);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
+        scrollPane.getViewport().setBackground(CyberPalette.INPUT_BG);
 
         activityCard.add(actTitle, BorderLayout.NORTH);
         activityCard.add(scrollPane, BorderLayout.CENTER);
@@ -232,29 +233,27 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
         if (threatCount > 0) healthScore -= 15;
 
         if (active) {
-            heroBanner.setBackground(new Color(24, 45, 34));
+            heroBanner.setBackground(CyberPalette.SURFACE_ACTIVE);
             heroBanner.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(45, 140, 75), 1),
-                new EmptyBorder(20, 25, 20, 25)
-            ));
-            statusTitle.setText("🛡️ SYSTEM IS FULLY PROTECTED");
-            statusTitle.setForeground(new Color(110, 230, 150));
-            statusSubtext.setText("Real-Time Sentinel Guard Active • YARA Heuristic Engine Enabled • Database Up to Date");
+                BorderFactory.createLineBorder(CyberPalette.SAFE, 1),
+                new EmptyBorder(20, 25, 20, 25)));
+            statusTitle.setText("\uD83D\uDEA1  SYSTEM IS FULLY PROTECTED");
+            statusTitle.setForeground(CyberPalette.SAFE);
+            statusSubtext.setText("Real-Time Sentinel Guard Active \u2022 YARA Heuristic Engine Enabled \u2022 Database Up to Date");
             shieldToggleBtn.setText("Turn Shield OFF");
-            shieldToggleBtn.setBackground(new Color(60, 40, 45));
+            shieldToggleBtn.setVariant(CyberButton.DANGER);
             realTimeCard.setValue("ACTIVE");
             realTimeCard.setSubtext("Guarding system");
         } else {
             heroBanner.setBackground(new Color(50, 35, 25));
             heroBanner.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(180, 90, 30), 1),
-                new EmptyBorder(20, 25, 20, 25)
-            ));
-            statusTitle.setText("⚠️ REAL-TIME PROTECTION IS OFF");
-            statusTitle.setForeground(new Color(255, 180, 80));
+                BorderFactory.createLineBorder(CyberPalette.WARNING, 1),
+                new EmptyBorder(20, 25, 20, 25)));
+            statusTitle.setText("\u26A0  REAL-TIME PROTECTION IS OFF");
+            statusTitle.setForeground(CyberPalette.WARNING);
             statusSubtext.setText("System background file monitoring is currently disabled!");
             shieldToggleBtn.setText("Turn Shield ON");
-            shieldToggleBtn.setBackground(new Color(16, 185, 129));
+            shieldToggleBtn.setVariant(CyberButton.PRIMARY);
             realTimeCard.setValue("DISABLED");
             realTimeCard.setSubtext("Shield inactive");
         }
@@ -267,34 +266,37 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
 
     private void createEicarTestFile() {
         try {
-            java.io.File desktop = new java.io.File(System.getProperty("user.home"), "Desktop");
-            if (!desktop.exists()) desktop = new java.io.File(System.getProperty("user.home"));
+            File desktop = new File(System.getProperty("user.home"), "Desktop");
+            if (!desktop.exists()) {
+                desktop = new File(System.getProperty("user.home"));
+            }
 
-            java.io.File eicarFile = new java.io.File(desktop, "eicar_test_virus.txt");
+            File eicarFile = new File(desktop, "eicar_test_virus.txt");
             String eicarContent = "X5O!P%@AP[4\\PZX54(P^)7CC)$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
 
-            java.nio.file.Files.write(eicarFile.toPath(), eicarContent.getBytes());
+            Files.write(eicarFile.toPath(), eicarContent.getBytes());
 
             JOptionPane.showMessageDialog(this,
-                "EICAR test malware file created at:\n" + eicarFile.getAbsolutePath() + 
-                "\n\nYou can now run a scan or check Real-Time Guard to verify SentinelAV detects it!",
-                "Safe Test File Generated",
-                JOptionPane.INFORMATION_MESSAGE);
+                "EICAR test malware file created at:\n" + eicarFile.getAbsolutePath()
+                    + "\n\nYou can now run a scan or check Real-Time Guard to verify SentinelAV detects it!",
+                "Safe Test File Generated", JOptionPane.INFORMATION_MESSAGE);
 
-            ActivityLogger.getInstance().info("Dashboard", "Generated EICAR test file at " + eicarFile.getAbsolutePath());
+            ActivityLogger.getInstance().info("Dashboard",
+                "Generated EICAR test file at " + eicarFile.getAbsolutePath());
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Failed to create EICAR test file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Failed to create EICAR test file: " + ex.getMessage(), "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     @Override
-    public void onFileDetected(java.nio.file.Path path, String eventType) {
+    public void onFileDetected(Path path, String eventType) {
         // Real-time event
     }
 
     @Override
-    public void onThreatIntercepted(com.sentinel.av.model.ScanResult result) {
+    public void onThreatIntercepted(ScanResult result) {
         threatCount++;
         SwingUtilities.invokeLater(this::updateDashboardStats);
     }
@@ -310,7 +312,8 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
     }
 
     private void appendActivity(ActivityLog log) {
-        recentActivityModel.addElement("[" + log.getTimestamp().substring(11) + "] [" + log.getLevel() + "] " + log.getMessage());
+        recentActivityModel.addElement("[" + log.getTimestamp().substring(11) + "] [" + log.getLevel() + "] "
+            + log.getMessage());
         if (recentActivityModel.size() > 60) {
             recentActivityModel.remove(0);
         }

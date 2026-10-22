@@ -2,11 +2,14 @@ package com.sentinel.av.ui;
 
 import com.sentinel.av.core.ActivityLogger;
 import com.sentinel.av.model.ActivityLog;
+import com.sentinel.av.ui.components.CyberButton;
+import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.io.File;
 import java.nio.file.Files;
@@ -33,40 +36,34 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
 
     private void initComponents() {
         // --- Top Header Card ---
-        JPanel topCard = new JPanel(new BorderLayout(10, 10));
-        topCard.setBackground(CyberPalette.SURFACE);
-        topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+        CyberCard topCard = new CyberCard(CyberPalette.BORDER);
 
-        JLabel titleLabel = new JLabel("📜 System Activity & Threat Audit Logs");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setForeground(Color.WHITE);
+        JLabel titleLabel = new JLabel("\uD83D\uDCDC  System Activity & Threat Audit Logs");
+        titleLabel.setFont(CyberPalette.FONT_TITLE_SMALL);
+        titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         JPanel rightControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         rightControls.setOpaque(false);
 
         JLabel filterLabel = new JLabel("Filter Level:");
-        filterLabel.setForeground(CyberPalette.TEXT_PRIMARY);
+        filterLabel.setForeground(CyberPalette.TEXT_SECONDARY);
+        filterLabel.setFont(CyberPalette.FONT_SMALL);
 
         filterBox = new JComboBox<>(new String[]{"ALL", "THREAT_DETECTED", "QUARANTINE", "SYSTEM", "INFO", "WARNING"});
-        filterBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        filterBox.setFont(CyberPalette.FONT_SMALL);
+        filterBox.setBackground(CyberPalette.INPUT_BG);
+        filterBox.setForeground(CyberPalette.TEXT_PRIMARY);
         filterBox.addActionListener(e -> refreshLogs());
 
-        JButton clearBtn = new JButton("🧹 Clear Logs");
-        clearBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        clearBtn.setBackground(CyberPalette.BORDER);
-        clearBtn.setForeground(Color.WHITE);
+        CyberButton clearBtn = new CyberButton("\uD83D\uDC19  Clear Logs", CyberButton.SECONDARY);
+        clearBtn.setFont(CyberPalette.FONT_SMALL);
         clearBtn.addActionListener(e -> {
             logger.clearLogs();
             refreshLogs();
         });
 
-        JButton exportBtn = new JButton("💾 Export Logs");
-        exportBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        exportBtn.setBackground(CyberPalette.ACCENT);
-        exportBtn.setForeground(Color.WHITE);
+        CyberButton exportBtn = new CyberButton("\uD83D\uDCBE  Export Logs", CyberButton.PRIMARY);
+        exportBtn.setFont(CyberPalette.FONT_SMALL);
         exportBtn.addActionListener(e -> exportLogs());
 
         rightControls.add(filterLabel);
@@ -78,31 +75,47 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
         topCard.add(rightControls, BorderLayout.EAST);
 
         // --- Center Table Card ---
-        JPanel tableCard = new JPanel(new BorderLayout(10, 10));
-        tableCard.setBackground(CyberPalette.SURFACE);
-        tableCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+        CyberCard tableCard = new CyberCard(CyberPalette.BORDER);
 
         String[] cols = {"Timestamp", "Level", "Category", "Event Description"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
-        logsTable = new JTable(tableModel);
-        logsTable.setBackground(CyberPalette.BACKGROUND);
-        logsTable.setForeground(Color.WHITE);
+        logsTable = new JTable(tableModel) {
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+                Component c = super.prepareRenderer(renderer, row, column);
+                if (c instanceof JComponent) {
+                    boolean isSelected = isRowSelected(row);
+                    if (isSelected) {
+                        c.setBackground(CyberPalette.BORDER_ACTIVE);
+                    } else {
+                        c.setBackground(row % 2 == 0 ? CyberPalette.BACKGROUND
+                                : new Color(15, 22, 40));
+                    }
+                }
+                return c;
+            }
+        };
+        logsTable.setForeground(CyberPalette.TEXT_PRIMARY);
         logsTable.setGridColor(CyberPalette.BORDER);
         logsTable.setRowHeight(26);
-        logsTable.setFont(new Font("Consolas", Font.PLAIN, 12));
-        logsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        logsTable.setFont(CyberPalette.FONT_CODE);
+        logsTable.getTableHeader().setFont(CyberPalette.FONT_BODY_BOLD);
         logsTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
         logsTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        logsTable.getTableHeader().setReorderingAllowed(false);
+        logsTable.setAutoCreateRowSorter(true);
+        logsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        logsTable.setIntercellSpacing(new Dimension(0, 1));
 
         JScrollPane scrollPane = new JScrollPane(logsTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
+        scrollPane.getViewport().setBackground(CyberPalette.BACKGROUND);
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 
@@ -135,13 +148,16 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
             File dest = chooser.getSelectedFile();
             StringBuilder sb = new StringBuilder();
             for (ActivityLog log : logger.getLogs()) {
-                sb.append(String.format("[%s] [%s] [%s] %s%n", log.getTimestamp(), log.getLevel(), log.getCategory(), log.getMessage()));
+                sb.append(String.format("[%s] [%s] [%s] %s%n",
+                    log.getTimestamp(), log.getLevel(), log.getCategory(), log.getMessage()));
             }
             try {
                 Files.write(dest.toPath(), sb.toString().getBytes());
-                JOptionPane.showMessageDialog(this, "Logs exported to " + dest.getAbsolutePath(), "Export Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Logs exported to " + dest.getAbsolutePath(),
+                        "Export Success", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Failed to export logs: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Failed to export logs: " + ex.getMessage(), "Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }

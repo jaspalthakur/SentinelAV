@@ -3,6 +3,7 @@ package com.sentinel.av.ui;
 import com.sentinel.av.core.QuarantineManager;
 import com.sentinel.av.core.ScannerEngine;
 import com.sentinel.av.model.ScanResult;
+import com.sentinel.av.ui.components.CyberButton;
 import com.sentinel.av.ui.components.CyberCard;
 import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.StatusBadge;
@@ -11,6 +12,9 @@ import com.sentinel.av.ui.components.ThreatDetailDialog;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -29,12 +33,12 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
     private JRadioButton customScanRadio;
     private JRadioButton processScanRadio;
     private JTextField customPathField;
-    private JButton browseBtn;
+    private CyberButton browseBtn;
 
-    private JButton startScanBtn;
-    private JButton cancelScanBtn;
-    private JButton quarantineAllBtn;
-    private JButton deleteAllBtn;
+    private CyberButton startScanBtn;
+    private CyberButton cancelScanBtn;
+    private CyberButton quarantineAllBtn;
+    private CyberButton deleteAllBtn;
 
     private JProgressBar progressBar;
     private JLabel progressStatusLabel;
@@ -65,23 +69,23 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         // --- Top Selection Card ---
         CyberCard topCard = new CyberCard(CyberPalette.BORDER);
 
-        JLabel titleLabel = new JLabel("🔍 Multi-Engine Malware Scanner");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setForeground(Color.WHITE);
+        JLabel titleLabel = new JLabel("\uD83D\uDD0D  Multi-Engine Malware Scanner");
+        titleLabel.setFont(CyberPalette.FONT_TITLE_SMALL);
+        titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
-        JPanel scanTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 8));
+        JPanel scanTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 8));
         scanTypePanel.setOpaque(false);
 
         ButtonGroup scanGroup = new ButtonGroup();
-        quickScanRadio = new JRadioButton("⚡ Quick Scan", true);
-        fullScanRadio = new JRadioButton("🖥️ Deep Full Disk Scan");
-        customScanRadio = new JRadioButton("📁 Custom Target");
-        processScanRadio = new JRadioButton("⚙️ Process & Memory Scan");
+        quickScanRadio = new JRadioButton("\u26A1  Quick Scan", true);
+        fullScanRadio = new JRadioButton("\uD83E\uDDFB\u200D\u2642\uFE0F  Deep Full Disk Scan");
+        customScanRadio = new JRadioButton("\uD83D\uDCC1  Custom Target");
+        processScanRadio = new JRadioButton("\u2699\uFE0F  Process & Memory Scan");
 
         for (JRadioButton rb : new JRadioButton[]{quickScanRadio, fullScanRadio, customScanRadio, processScanRadio}) {
             rb.setOpaque(false);
-            rb.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            rb.setForeground(new Color(210, 225, 245));
+            rb.setFont(CyberPalette.FONT_BODY);
+            rb.setForeground(CyberPalette.TEXT_SECONDARY);
             scanGroup.add(rb);
             scanTypePanel.add(rb);
         }
@@ -90,16 +94,17 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         pathSelectionPanel.setOpaque(false);
 
         customPathField = new JTextField(System.getProperty("user.home"));
-        customPathField.setFont(new Font("Consolas", Font.PLAIN, 12));
-        customPathField.setBackground(new Color(25, 28, 35));
-        customPathField.setForeground(Color.WHITE);
-        customPathField.setCaretColor(Color.WHITE);
+        customPathField.setFont(CyberPalette.FONT_CODE);
+        customPathField.setBackground(CyberPalette.INPUT_BG);
+        customPathField.setForeground(CyberPalette.TEXT_PRIMARY);
+        customPathField.setCaretColor(CyberPalette.TEXT_PRIMARY);
+        customPathField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(CyberPalette.INPUT_BORDER),
+                new EmptyBorder(6, 10, 6, 10)));
         customPathField.setEnabled(false);
 
-        browseBtn = new JButton("Browse...");
-        browseBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        browseBtn.setBackground(new Color(45, 52, 65));
-        browseBtn.setForeground(Color.WHITE);
+        browseBtn = new CyberButton("Browse\u2026", CyberButton.SECONDARY);
+        browseBtn.setFont(CyberPalette.FONT_SMALL);
         browseBtn.setEnabled(false);
         browseBtn.addActionListener(e -> browsePath());
 
@@ -123,22 +128,23 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         CyberCard progressCard = new CyberCard(CyberPalette.BORDER);
 
         progressBar = new JProgressBar(0, 100);
-        progressBar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        progressBar.setFont(CyberPalette.FONT_SMALL);
         progressBar.setStringPainted(true);
-        progressBar.setPreferredSize(new Dimension(100, 24));
-        progressBar.setForeground(new Color(16, 185, 129));
+        progressBar.setPreferredSize(new Dimension(100, 20));
+        progressBar.setForeground(CyberPalette.SAFE);
+        progressBar.setBorderPainted(true);
 
         progressStatusLabel = new JLabel("Engine Status: Ready to start malware scan.");
-        progressStatusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        progressStatusLabel.setForeground(new Color(170, 185, 205));
+        progressStatusLabel.setFont(CyberPalette.FONT_SMALL);
+        progressStatusLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         countLabel = new JLabel("Files Scanned: 0");
-        countLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        countLabel.setForeground(new Color(140, 200, 255));
+        countLabel.setFont(CyberPalette.FONT_BODY_BOLD);
+        countLabel.setForeground(CyberPalette.ACCENT);
 
         timerLabel = new JLabel("Elapsed Time: 00:00");
-        timerLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        timerLabel.setForeground(new Color(170, 185, 205));
+        timerLabel.setFont(CyberPalette.FONT_SMALL);
+        timerLabel.setForeground(CyberPalette.TEXT_MUTED);
 
         JPanel statusBottom = new JPanel(new BorderLayout());
         statusBottom.setOpaque(false);
@@ -150,39 +156,31 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         rightStats.add(timerLabel);
         statusBottom.add(rightStats, BorderLayout.EAST);
 
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 10));
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         btnRow.setOpaque(false);
 
-        startScanBtn = new JButton("▶ Start Malware Scan");
-        startScanBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        startScanBtn.setBackground(new Color(59, 130, 246));
-        startScanBtn.setForeground(Color.WHITE);
-        startScanBtn.setFocusPainted(false);
+        startScanBtn = new CyberButton("\u25B6  Start Malware Scan", CyberButton.PRIMARY);
+        startScanBtn.setFont(CyberPalette.FONT_BODY_BOLD);
         startScanBtn.addActionListener(e -> startScan());
 
-        cancelScanBtn = new JButton("⏹ Cancel Scan");
-        cancelScanBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        cancelScanBtn.setBackground(new Color(239, 68, 68));
-        cancelScanBtn.setForeground(Color.WHITE);
+        cancelScanBtn = new CyberButton("\u23F9  Cancel Scan", CyberButton.DANGER);
+        cancelScanBtn.setFont(CyberPalette.FONT_SMALL);
         cancelScanBtn.setEnabled(false);
         cancelScanBtn.addActionListener(e -> cancelScan());
 
-        quarantineAllBtn = new JButton("🔒 Quarantine All Threats");
-        quarantineAllBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        quarantineAllBtn.setBackground(new Color(168, 85, 247));
-        quarantineAllBtn.setForeground(Color.WHITE);
+        quarantineAllBtn = new CyberButton("\uD83D\uDD12  Quarantine All Threats", CyberButton.PRIMARY);
+        quarantineAllBtn.setFont(CyberPalette.FONT_SMALL);
         quarantineAllBtn.setEnabled(false);
         quarantineAllBtn.addActionListener(e -> quarantineAllThreats());
 
-        deleteAllBtn = new JButton("🗑 Delete All Threats");
-        deleteAllBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        deleteAllBtn.setBackground(new Color(185, 28, 28));
-        deleteAllBtn.setForeground(Color.WHITE);
+        deleteAllBtn = new CyberButton("\uD83D\uDDD1\uFE0F  Delete All Threats", CyberButton.DANGER);
+        deleteAllBtn.setFont(CyberPalette.FONT_SMALL);
         deleteAllBtn.setEnabled(false);
         deleteAllBtn.addActionListener(e -> deleteAllThreats());
 
         btnRow.add(startScanBtn);
         btnRow.add(cancelScanBtn);
+        btnRow.add(Box.createRigidArea(new Dimension(12, 0)));
         btnRow.add(quarantineAllBtn);
         btnRow.add(deleteAllBtn);
 
@@ -193,20 +191,22 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         // --- Center Results Table Card ---
         CyberCard tableCard = new CyberCard(CyberPalette.BORDER);
 
-        JLabel tableTitle = new JLabel("🚨 Intercepted Malware Detections");
-        tableTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        tableTitle.setForeground(Color.WHITE);
+        JLabel tableTitle = new JLabel("\uD83D\uDEA8  Intercepted Malware Detections");
+        tableTitle.setFont(CyberPalette.FONT_TITLE_SMALL);
+        tableTitle.setForeground(CyberPalette.TEXT_PRIMARY);
 
         String[] cols = {"File Name", "Threat Name", "Severity", "Detection Engine", "Status", "Full Path"};
         threatsTableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
         threatsTable = new JTable(threatsTableModel) {
             @Override
             public String getToolTipText(MouseEvent e) {
-                java.awt.Point p = e.getPoint();
+                Point p = e.getPoint();
                 int viewRow = rowAtPoint(p);
                 int viewCol = columnAtPoint(p);
                 if (viewRow < 0 || viewCol < 0) {
@@ -217,23 +217,41 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
                 Object value = threatsTableModel.getValueAt(modelRow, modelCol);
                 return value != null ? value.toString() : null;
             }
+
+            // Zebra striping for readability
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+                Component c = super.prepareRenderer(renderer, row, column);
+                if (c instanceof JComponent) {
+                    boolean isSelected = isRowSelected(row);
+                    if (isSelected) {
+                        c.setBackground(CyberPalette.BORDER_ACTIVE);
+                    } else {
+                        c.setBackground(row % 2 == 0 ? CyberPalette.BACKGROUND
+                                : new Color(15, 22, 40));
+                    }
+                }
+                return c;
+            }
         };
-        threatsTable.setBackground(CyberPalette.BACKGROUND);
         threatsTable.setForeground(CyberPalette.TEXT_PRIMARY);
         threatsTable.setGridColor(CyberPalette.BORDER);
-        threatsTable.setRowHeight(28);
-        threatsTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        threatsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        threatsTable.setRowHeight(30);
+        threatsTable.setFont(CyberPalette.FONT_BODY);
+        threatsTable.getTableHeader().setFont(CyberPalette.FONT_BODY_BOLD);
         threatsTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
         threatsTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        threatsTable.getTableHeader().setReorderingAllowed(false);
         threatsTable.setAutoCreateRowSorter(true);
         threatsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         threatsTable.setToolTipText("");
+        threatsTable.setIntercellSpacing(new Dimension(0, 1));
 
-        // Column sizing: keep the action buttons readable, give the path room.
-        int[] widths = {200, 220, 110, 260, 120, 460};
-        for (int i = 0; i < widths.length && i < threatsTable.getColumnCount(); i++) {
-            threatsTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+        // Column sizing
+        int[] widths = {220, 220, 110, 260, 120, 420};
+        TableColumnModel cm = threatsTable.getColumnModel();
+        for (int i = 0; i < widths.length && i < cm.getColumnCount(); i++) {
+            cm.getColumn(i).setPreferredWidth(widths[i]);
         }
 
         // Severity renderer
@@ -267,6 +285,7 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
 
         JScrollPane scrollPane = new JScrollPane(threatsTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
+        scrollPane.getViewport().setBackground(CyberPalette.BACKGROUND);
 
         tableCard.add(tableTitle, BorderLayout.NORTH);
         tableCard.add(scrollPane, BorderLayout.CENTER);
@@ -318,7 +337,8 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
             mode = ScannerEngine.ScanMode.CUSTOM_PATH_SCAN;
             String path = customPathField.getText().trim();
             if (path.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please select a valid path to scan.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Please select a valid path to scan.", "Error",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
             target = new File(path);
@@ -381,7 +401,7 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         SwingUtilities.invokeLater(() -> {
             progressBar.setValue(Math.min(scannedCount, progressBar.getMaximum()));
             updateProgressString(scannedCount);
-            progressStatusLabel.setText("Scanning: " + currentPath);
+            progressStatusLabel.setText("Scanning: " + currentFile.getName());
             progressStatusLabel.setToolTipText(currentPath);
             countLabel.setText("Files Scanned: " + scannedCount);
         });
@@ -449,7 +469,9 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
     @Override
     public void onScanComplete(List<ScanResult> allResults, List<ScanResult> threats, long durationMs) {
         SwingUtilities.invokeLater(() -> {
-            if (elapsedTimer != null) elapsedTimer.stop();
+            if (elapsedTimer != null) {
+                elapsedTimer.stop();
+            }
             progressBar.setIndeterminate(false);
             progressBar.setValue(progressBar.getMaximum());
             updateProgressString(progressBar.getValue());
@@ -459,15 +481,16 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
 
             if (threats.isEmpty()) {
                 progressStatusLabel.setText("Scan Finished. No threats found! System is clean.");
-                JOptionPane.showMessageDialog(this, 
-                    "Scan completed successfully!\nFiles scanned: " + allResults.size() + "\nNo threats detected.",
-                    "Scan Complete", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                progressStatusLabel.setText("Scan Finished. ⚠️ THREATS DETECTED: " + threats.size());
                 JOptionPane.showMessageDialog(this,
-                    "⚠️ Scan completed with warnings!\nThreats detected: " + threats.size() + 
-                    "\n\nPlease click 'Quarantine All' to safely isolate infected files.",
-                    "Threats Detected!", JOptionPane.WARNING_MESSAGE);
+                        "Scan completed successfully!\nFiles scanned: " + allResults.size()
+                                + "\nNo threats detected.",
+                        "Scan Complete", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                progressStatusLabel.setText("Scan Finished. \u26A0 THREATS DETECTED: " + threats.size());
+                JOptionPane.showMessageDialog(this,
+                        "\u26A0 Scan completed with warnings!\nThreats detected: " + threats.size()
+                                + "\n\nPlease click 'Quarantine All' to safely isolate infected files.",
+                        "Threats Detected!", JOptionPane.WARNING_MESSAGE);
             }
 
             mainFrame.updateDashboardStats();
@@ -486,7 +509,8 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
             }
         }
 
-        JOptionPane.showMessageDialog(this, count + " threat files isolated into Quarantine Vault.", "Quarantine Success", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, count + " threat files isolated into Quarantine Vault.",
+                "Quarantine Success", JOptionPane.INFORMATION_MESSAGE);
         quarantineAllBtn.setEnabled(false);
         deleteAllBtn.setEnabled(false);
         mainFrame.updateDashboardStats();
@@ -515,11 +539,13 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
                         res.setStatus(ScanResult.ThreatStatus.DELETED);
                         count++;
                         threatsTableModel.setValueAt("DELETED", i, 4);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
             }
 
-            JOptionPane.showMessageDialog(this, count + " threat files permanently deleted.", "Delete Success", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, count + " threat files permanently deleted.",
+                    "Delete Success", JOptionPane.INFORMATION_MESSAGE);
             quarantineAllBtn.setEnabled(false);
             deleteAllBtn.setEnabled(false);
             mainFrame.updateDashboardStats();
