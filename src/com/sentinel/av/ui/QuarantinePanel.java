@@ -3,6 +3,7 @@ package com.sentinel.av.ui;
 import com.sentinel.av.core.QuarantineManager;
 import com.sentinel.av.model.QuarantineItem;
 import com.sentinel.av.model.ScanResult;
+import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.StatusBadge;
 import com.sentinel.av.ui.components.ThreatDetailDialog;
 
@@ -28,7 +29,7 @@ public class QuarantinePanel extends JPanel {
         this.mainFrame = mainFrame;
         this.qManager = QuarantineManager.getInstance();
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(20, 23, 29));
+        setBackground(CyberPalette.BACKGROUND);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         initComponents();
@@ -38,19 +39,19 @@ public class QuarantinePanel extends JPanel {
     private void initComponents() {
         // --- Top Header Card ---
         JPanel topCard = new JPanel(new BorderLayout(10, 10));
-        topCard.setBackground(new Color(33, 37, 44));
+        topCard.setBackground(CyberPalette.SURFACE);
         topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
         JLabel titleLabel = new JLabel("🔒 Quarantine Vault (AES-256 Encrypted)");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         itemCountLabel = new JLabel("Total Encrypted Vault Items: 0");
         itemCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        itemCountLabel.setForeground(new Color(170, 185, 205));
+        itemCountLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         JPanel titleContainer = new JPanel(new GridLayout(2, 1, 4, 4));
         titleContainer.setOpaque(false);
@@ -62,7 +63,7 @@ public class QuarantinePanel extends JPanel {
 
         JButton inspectBtn = new JButton("🔍 Inspect Risk Reasons");
         inspectBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        inspectBtn.setBackground(new Color(59, 130, 246));
+        inspectBtn.setBackground(CyberPalette.ACCENT);
         inspectBtn.setForeground(Color.WHITE);
         inspectBtn.addActionListener(e -> showSelectedThreatDetail());
 
@@ -87,9 +88,9 @@ public class QuarantinePanel extends JPanel {
 
         // --- Center Table Card ---
         JPanel tableCard = new JPanel(new BorderLayout(10, 10));
-        tableCard.setBackground(new Color(33, 37, 44));
+        tableCard.setBackground(CyberPalette.SURFACE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
@@ -100,14 +101,15 @@ public class QuarantinePanel extends JPanel {
         };
 
         quarantineTable = new JTable(tableModel);
-        quarantineTable.setBackground(new Color(25, 29, 36));
-        quarantineTable.setForeground(Color.WHITE);
-        quarantineTable.setGridColor(new Color(45, 52, 65));
+        quarantineTable.setBackground(CyberPalette.BACKGROUND);
+        quarantineTable.setForeground(CyberPalette.TEXT_PRIMARY);
+        quarantineTable.setGridColor(CyberPalette.BORDER);
         quarantineTable.setRowHeight(28);
         quarantineTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         quarantineTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        quarantineTable.getTableHeader().setBackground(new Color(38, 44, 54));
-        quarantineTable.getTableHeader().setForeground(new Color(200, 215, 235));
+        quarantineTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
+        quarantineTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        quarantineTable.setAutoCreateRowSorter(true);
 
         // Severity renderer
         quarantineTable.getColumnModel().getColumn(3).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
@@ -128,7 +130,7 @@ public class QuarantinePanel extends JPanel {
         });
 
         JScrollPane scrollPane = new JScrollPane(quarantineTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 
@@ -152,8 +154,17 @@ public class QuarantinePanel extends JPanel {
         itemCountLabel.setText("Total Encrypted Vault Items: " + items.size());
     }
 
+    /** Maps the selected view row to the model index, so sorting stays consistent. */
+    private int selectedModelRow() {
+        int viewRow = quarantineTable.getSelectedRow();
+        if (viewRow < 0) {
+            return -1;
+        }
+        return quarantineTable.convertRowIndexToModel(viewRow);
+    }
+
     private void showSelectedThreatDetail() {
-        int selectedRow = quarantineTable.getSelectedRow();
+        int selectedRow = selectedModelRow();
         if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this, "Please select an item from the quarantine vault.", "No Selection", JOptionPane.WARNING_MESSAGE);
             return;
@@ -187,7 +198,7 @@ public class QuarantinePanel extends JPanel {
     }
 
     private void restoreSelected() {
-        int selectedRow = quarantineTable.getSelectedRow();
+        int selectedRow = selectedModelRow();
         if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this, "Please select a quarantined file from the table.", "No Selection", JOptionPane.WARNING_MESSAGE);
             return;
@@ -213,7 +224,7 @@ public class QuarantinePanel extends JPanel {
     }
 
     private void deleteSelected() {
-        int selectedRow = quarantineTable.getSelectedRow();
+        int selectedRow = selectedModelRow();
         if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this, "Please select a quarantined file to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
             return;
@@ -222,11 +233,13 @@ public class QuarantinePanel extends JPanel {
         List<QuarantineItem> items = qManager.getItems();
         if (selectedRow < items.size()) {
             QuarantineItem item = items.get(selectedRow);
-            int confirm = JOptionPane.showConfirmDialog(this,
+            Object[] options = {"Delete Forever", "Cancel"};
+            int confirm = JOptionPane.showOptionDialog(this,
                 "Permanently delete file: " + item.getFileName() + "? This action cannot be undone!",
-                "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE);
+                "Confirm Delete", JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                null, options, options[1]);
 
-            if (confirm == JOptionPane.YES_OPTION) {
+            if (confirm == 0) {
                 if (qManager.deletePermanently(item)) {
                     refreshTable();
                     mainFrame.updateDashboardStats();

@@ -4,6 +4,7 @@ import com.sentinel.av.core.ActivityLogger;
 import com.sentinel.av.core.SignatureDatabase;
 import com.sentinel.av.model.VirusSignature;
 import com.sentinel.av.ui.components.StatusBadge;
+import com.sentinel.av.ui.components.CyberPalette;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -26,7 +27,7 @@ public class SignaturesPanel extends JPanel {
         this.mainFrame = mainFrame;
         this.db = SignatureDatabase.getInstance();
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(24, 27, 33));
+        setBackground(CyberPalette.BACKGROUND);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         initComponents();
@@ -36,9 +37,9 @@ public class SignaturesPanel extends JPanel {
     private void initComponents() {
         // --- Top Header Card ---
         JPanel topCard = new JPanel(new BorderLayout(10, 10));
-        topCard.setBackground(new Color(33, 37, 44));
+        topCard.setBackground(CyberPalette.SURFACE);
         topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
@@ -48,7 +49,7 @@ public class SignaturesPanel extends JPanel {
 
         countLabel = new JLabel("Total Loaded Signatures: 0");
         countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        countLabel.setForeground(new Color(170, 185, 205));
+        countLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         JPanel titleContainer = new JPanel(new GridLayout(2, 1, 4, 4));
         titleContainer.setOpaque(false);
@@ -60,7 +61,7 @@ public class SignaturesPanel extends JPanel {
 
         JButton addSigBtn = new JButton("➕ Add Custom Signature");
         addSigBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        addSigBtn.setBackground(new Color(40, 120, 200));
+        addSigBtn.setBackground(CyberPalette.ACCENT);
         addSigBtn.setForeground(Color.WHITE);
         addSigBtn.addActionListener(e -> showAddSignatureDialog());
 
@@ -78,9 +79,9 @@ public class SignaturesPanel extends JPanel {
 
         // --- Center Table Card ---
         JPanel tableCard = new JPanel(new BorderLayout(10, 10));
-        tableCard.setBackground(new Color(33, 37, 44));
+        tableCard.setBackground(CyberPalette.SURFACE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
@@ -91,14 +92,14 @@ public class SignaturesPanel extends JPanel {
         };
 
         signaturesTable = new JTable(tableModel);
-        signaturesTable.setBackground(new Color(25, 29, 36));
+        signaturesTable.setBackground(CyberPalette.BACKGROUND);
         signaturesTable.setForeground(Color.WHITE);
-        signaturesTable.setGridColor(new Color(45, 52, 65));
+        signaturesTable.setGridColor(CyberPalette.BORDER);
         signaturesTable.setRowHeight(28);
         signaturesTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         signaturesTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        signaturesTable.getTableHeader().setBackground(new Color(38, 44, 54));
-        signaturesTable.getTableHeader().setForeground(new Color(200, 215, 235));
+        signaturesTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
+        signaturesTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
 
         // Severity renderer
         signaturesTable.getColumnModel().getColumn(4).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
@@ -109,7 +110,7 @@ public class SignaturesPanel extends JPanel {
         });
 
         JScrollPane scrollPane = new JScrollPane(signaturesTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 

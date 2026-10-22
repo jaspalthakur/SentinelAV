@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
+import java.util.List;
 
 public class ThreatDetailDialog extends JDialog {
 
@@ -31,10 +32,26 @@ public class ThreatDetailDialog extends JDialog {
         subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         subLabel.setForeground(new Color(170, 185, 205));
 
-        JPanel titleGroup = new JPanel(new GridLayout(2, 1, 2, 2));
+        // MITRE ATT&CK + matched hash: the "why am I seeing this" line
+        List<String> techniques = result.getAttackTechniques();
+        StringBuilder detail = new StringBuilder();
+        if (!techniques.isEmpty()) {
+            detail.append("MITRE ATT&CK: ").append(String.join(", ", techniques));
+        }
+        if (result.getMatchedHash() != null && !result.getMatchedHash().isBlank()) {
+            if (detail.length() > 0) detail.append("   |   ");
+            detail.append("SHA-256: ").append(result.getMatchedHash());
+        }
+        if (detail.length() == 0) detail.append("SHA-256: not matched against known signatures");
+        JLabel detailLabel = new JLabel(detail.toString());
+        detailLabel.setFont(new Font("Consolas", Font.PLAIN, 11));
+        detailLabel.setForeground(new Color(140, 155, 175));
+
+        JPanel titleGroup = new JPanel(new GridLayout(3, 1, 2, 2));
         titleGroup.setOpaque(false);
         titleGroup.add(titleLabel);
         titleGroup.add(subLabel);
+        titleGroup.add(detailLabel);
 
         StatusBadge severityBadge = StatusBadge.createSeverityBadge(
             result.getSeverity() != null ? result.getSeverity().name() : "HIGH"
@@ -52,7 +69,7 @@ public class ThreatDetailDialog extends JDialog {
         scoreCard.setPreferredSize(new Dimension(180, 0));
 
         SecurityGaugePanel gauge = new SecurityGaugePanel();
-        gauge.setSecurityScore(result.getRiskScore(), result.getRiskScore() >= 75 ? "CRITICAL THREAT" : "HIGH RISK");
+        gauge.setSecurityScore(result.getRiskScore(), verdictLabelFor(result.getRiskScore()));
         scoreCard.add(gauge, BorderLayout.CENTER);
 
         // Reasons List Card
@@ -132,5 +149,23 @@ public class ThreatDetailDialog extends JDialog {
         mainPanel.add(bottomCard, BorderLayout.SOUTH);
 
         setContentPane(mainPanel);
+        getRootPane().setDefaultButton(closeBtn);
+
+        // ESC closes the dialog.
+        KeyStroke escape = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0);
+        getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(escape, "ESCAPE");
+        getRootPane().getActionMap().put("ESCAPE", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                dispose();
+            }
+        });
+    }
+
+    private static String verdictLabelFor(int score) {
+        if (score >= 95) return "CRITICAL THREAT";
+        if (score >= 75) return "HIGH RISK";
+        if (score >= 45) return "SUSPICIOUS";
+        return "LOW RISK";
     }
 }

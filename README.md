@@ -1,4 +1,4 @@
-# SentinelAV v3.6 — EDR & MITRE ATT&CK Threat Engine
+# SentinelAV v3.7 — EDR & MITRE ATT&CK Threat Engine
 
 [![Build and Test](https://github.com/jaspalthakur/SentinelAV/actions/workflows/build.yml/badge.svg)](https://github.com/jaspalthakur/SentinelAV/actions/workflows/build.yml)
 
@@ -6,7 +6,19 @@
 
 ---
 
-## What's new in v3.6
+## What's new in v3.7 (UI & UX polish)
+
+- **Unified dark theme** — every screen now draws from the single `CyberPalette` (navy surfaces, consistent borders and text tones) instead of mixing two card styles.
+- **Real scan progress** — the progress bar now shows the true `N / M files (P%)` based on the planned scan size instead of a fake modulo percentage.
+- **Threat drill-down** — double-click any detection in the scanner to open the threat analysis dialog with its explainable risk signals, MITRE ATT&CK techniques, and matched SHA-256.
+- **Sortable tables** — detections, quarantine vault, processes, and signature tables are sortable; bulk actions honor the current sort order.
+- **Live status bar** — a footer shows shield state, tripwire state, vault item count, and JVM memory, refreshed continuously.
+- **Keyboard navigation** — `Ctrl+1`…`Ctrl+8` jump directly to each section.
+- **App icon** — a rendered shield icon on the window and taskbar.
+- **Safer destructive actions** — permanent delete and terminate confirmations now default to *Cancel*, so Enter can never destroy data.
+- **Clean exit** — closing the window (with a confirmation when the shield is active) stops monitoring, disarms the canary tripwire, flushes the activity log, and removes deployed decoys.
+
+### What's new in v3.6
 
 - **Headless CLI** ([CliRunner.java](src/com/sentinel/av/cli/CliRunner.java)) — scan files or folders from scripts and CI, with text or JSON output, optional quarantine, and stable exit codes.
 - **Parallel scanning** ([ScannerEngine.java](src/com/sentinel/av/core/ScannerEngine.java)) — a bounded worker pool scans large trees concurrently while preserving discovery order.

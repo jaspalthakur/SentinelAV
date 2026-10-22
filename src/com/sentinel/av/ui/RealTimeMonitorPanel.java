@@ -2,6 +2,7 @@ package com.sentinel.av.ui;
 
 import com.sentinel.av.core.RealTimeMonitor;
 import com.sentinel.av.model.ScanResult;
+import com.sentinel.av.ui.components.CyberPalette;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -23,7 +24,7 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
         this.mainFrame = mainFrame;
         this.monitor = RealTimeMonitor.getInstance();
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(24, 27, 33));
+        setBackground(CyberPalette.BACKGROUND);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         initComponents();
@@ -35,9 +36,9 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
     private void initComponents() {
         // --- Top Status & Toggle Banner ---
         JPanel topCard = new JPanel(new BorderLayout(15, 15));
-        topCard.setBackground(new Color(33, 37, 44));
+        topCard.setBackground(CyberPalette.SURFACE);
         topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(20, 25, 20, 25)
         ));
 
@@ -74,9 +75,9 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
 
         // Left Panel: Watched Directories
         JPanel watchedCard = new JPanel(new BorderLayout(10, 10));
-        watchedCard.setBackground(new Color(33, 37, 44));
+        watchedCard.setBackground(CyberPalette.SURFACE);
         watchedCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
@@ -90,12 +91,12 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
         }
 
         JList<String> watchedList = new JList<>(watchedPathsModel);
-        watchedList.setBackground(new Color(25, 29, 36));
-        watchedList.setForeground(new Color(200, 220, 240));
+        watchedList.setBackground(CyberPalette.BACKGROUND);
+        watchedList.setForeground(CyberPalette.TEXT_PRIMARY);
         watchedList.setFont(new Font("Consolas", Font.PLAIN, 12));
 
         JScrollPane watchedScroll = new JScrollPane(watchedList);
-        watchedScroll.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        watchedScroll.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
         JButton addFolderBtn = new JButton("➕ Add Directory to Watch");
         addFolderBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -109,9 +110,9 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
 
         // Right Panel: Live Activity Event Stream
         JPanel eventsCard = new JPanel(new BorderLayout(10, 10));
-        eventsCard.setBackground(new Color(33, 37, 44));
+        eventsCard.setBackground(CyberPalette.SURFACE);
         eventsCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
@@ -121,12 +122,12 @@ public class RealTimeMonitorPanel extends JPanel implements RealTimeMonitor.Moni
 
         eventsModel = new DefaultListModel<>();
         JList<String> eventsList = new JList<>(eventsModel);
-        eventsList.setBackground(new Color(25, 29, 36));
+        eventsList.setBackground(CyberPalette.BACKGROUND);
         eventsList.setForeground(new Color(180, 230, 190));
         eventsList.setFont(new Font("Consolas", Font.PLAIN, 12));
 
         JScrollPane eventsScroll = new JScrollPane(eventsList);
-        eventsScroll.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        eventsScroll.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
         eventsCard.add(eventsTitle, BorderLayout.NORTH);
         eventsCard.add(eventsScroll, BorderLayout.CENTER);

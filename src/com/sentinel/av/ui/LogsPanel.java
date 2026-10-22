@@ -2,6 +2,7 @@ package com.sentinel.av.ui;
 
 import com.sentinel.av.core.ActivityLogger;
 import com.sentinel.av.model.ActivityLog;
+import com.sentinel.av.ui.components.CyberPalette;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -21,7 +22,7 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
     public LogsPanel() {
         this.logger = ActivityLogger.getInstance();
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(24, 27, 33));
+        setBackground(CyberPalette.BACKGROUND);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         initComponents();
@@ -33,9 +34,9 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
     private void initComponents() {
         // --- Top Header Card ---
         JPanel topCard = new JPanel(new BorderLayout(10, 10));
-        topCard.setBackground(new Color(33, 37, 44));
+        topCard.setBackground(CyberPalette.SURFACE);
         topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
@@ -47,7 +48,7 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
         rightControls.setOpaque(false);
 
         JLabel filterLabel = new JLabel("Filter Level:");
-        filterLabel.setForeground(new Color(200, 210, 225));
+        filterLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         filterBox = new JComboBox<>(new String[]{"ALL", "THREAT_DETECTED", "QUARANTINE", "SYSTEM", "INFO", "WARNING"});
         filterBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -55,7 +56,7 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
 
         JButton clearBtn = new JButton("🧹 Clear Logs");
         clearBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        clearBtn.setBackground(new Color(50, 56, 68));
+        clearBtn.setBackground(CyberPalette.BORDER);
         clearBtn.setForeground(Color.WHITE);
         clearBtn.addActionListener(e -> {
             logger.clearLogs();
@@ -64,7 +65,7 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
 
         JButton exportBtn = new JButton("💾 Export Logs");
         exportBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        exportBtn.setBackground(new Color(40, 120, 180));
+        exportBtn.setBackground(CyberPalette.ACCENT);
         exportBtn.setForeground(Color.WHITE);
         exportBtn.addActionListener(e -> exportLogs());
 
@@ -78,9 +79,9 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
 
         // --- Center Table Card ---
         JPanel tableCard = new JPanel(new BorderLayout(10, 10));
-        tableCard.setBackground(new Color(33, 37, 44));
+        tableCard.setBackground(CyberPalette.SURFACE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
@@ -91,17 +92,17 @@ public class LogsPanel extends JPanel implements ActivityLogger.LogListener {
         };
 
         logsTable = new JTable(tableModel);
-        logsTable.setBackground(new Color(25, 29, 36));
+        logsTable.setBackground(CyberPalette.BACKGROUND);
         logsTable.setForeground(Color.WHITE);
-        logsTable.setGridColor(new Color(45, 52, 65));
+        logsTable.setGridColor(CyberPalette.BORDER);
         logsTable.setRowHeight(26);
         logsTable.setFont(new Font("Consolas", Font.PLAIN, 12));
         logsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        logsTable.getTableHeader().setBackground(new Color(38, 44, 54));
-        logsTable.getTableHeader().setForeground(new Color(200, 215, 235));
+        logsTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
+        logsTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
 
         JScrollPane scrollPane = new JScrollPane(logsTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 

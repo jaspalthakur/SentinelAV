@@ -7,6 +7,7 @@ import com.sentinel.av.core.SignatureDatabase;
 import com.sentinel.av.model.ActivityLog;
 import com.sentinel.av.ui.components.AnalyticsChartPanel;
 import com.sentinel.av.ui.components.CyberCard;
+import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.SecurityGaugePanel;
 import com.sentinel.av.ui.components.StatCard;
 
@@ -34,10 +35,15 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
     public DashboardPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
         setLayout(new BorderLayout(20, 20));
-        setBackground(new Color(20, 23, 29));
+        setBackground(CyberPalette.BACKGROUND);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         initComponents();
+
+        // Seed the live feed with anything already recorded this session.
+        for (ActivityLog log : ActivityLogger.getInstance().getLogs()) {
+            appendActivity(log);
+        }
 
         RealTimeMonitor.getInstance().addListener(this);
         ActivityLogger.getInstance().addListener(this);
@@ -121,7 +127,7 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
         bottomGrid.setOpaque(false);
 
         // Card 1: Security Analytics
-        CyberCard analyticsCard = new CyberCard(new Color(50, 58, 72));
+        CyberCard analyticsCard = new CyberCard(CyberPalette.BORDER);
         JLabel chartTitle = new JLabel("📊 Weekly Security Activity");
         chartTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
         chartTitle.setForeground(Color.WHITE);
@@ -131,7 +137,7 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
         analyticsCard.add(chart, BorderLayout.CENTER);
 
         // Card 2: Quick Actions
-        CyberCard actionsCard = new CyberCard(new Color(50, 58, 72));
+        CyberCard actionsCard = new CyberCard(CyberPalette.BORDER);
         JLabel qaTitle = new JLabel("⚡ Quick Security Actions");
         qaTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
         qaTitle.setForeground(Color.WHITE);
@@ -176,7 +182,7 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
         actionsCard.add(qaBtnGrid, BorderLayout.CENTER);
 
         // Card 3: Live Security Log Feed
-        CyberCard activityCard = new CyberCard(new Color(50, 58, 72));
+        CyberCard activityCard = new CyberCard(CyberPalette.BORDER);
         JLabel actTitle = new JLabel("📜 Security Event Audit Feed");
         actTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
         actTitle.setForeground(Color.WHITE);
@@ -300,11 +306,13 @@ public class DashboardPanel extends JPanel implements RealTimeMonitor.MonitorEve
 
     @Override
     public void onLogAdded(ActivityLog log) {
-        SwingUtilities.invokeLater(() -> {
-            recentActivityModel.addElement("[" + log.getTimestamp().substring(11) + "] [" + log.getLevel() + "] " + log.getMessage());
-            if (recentActivityModel.size() > 60) {
-                recentActivityModel.remove(0);
-            }
-        });
+        SwingUtilities.invokeLater(() -> appendActivity(log));
+    }
+
+    private void appendActivity(ActivityLog log) {
+        recentActivityModel.addElement("[" + log.getTimestamp().substring(11) + "] [" + log.getLevel() + "] " + log.getMessage());
+        if (recentActivityModel.size() > 60) {
+            recentActivityModel.remove(0);
+        }
     }
 }

@@ -12,7 +12,7 @@ public class StatCard extends JPanel {
 
     public StatCard(String title, String initialValue, String subtext, Color accentColor) {
         setLayout(new BorderLayout(5, 5));
-        setBackground(new Color(35, 39, 46));
+        setBackground(CyberPalette.SURFACE);
         setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 4, 0, 0, accentColor),
             new EmptyBorder(15, 18, 15, 18)
@@ -20,15 +20,15 @@ public class StatCard extends JPanel {
 
         titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        titleLabel.setForeground(new Color(160, 170, 185));
+        titleLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         valueLabel = new JLabel(initialValue);
         valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
-        valueLabel.setForeground(Color.WHITE);
+        valueLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         subtextLabel = new JLabel(subtext);
         subtextLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        subtextLabel.setForeground(new Color(130, 140, 155));
+        subtextLabel.setForeground(CyberPalette.TEXT_MUTED);
 
         JPanel textPanel = new JPanel(new GridLayout(3, 1, 2, 2));
         textPanel.setOpaque(false);

@@ -2,6 +2,7 @@ package com.sentinel.av.ui;
 
 import com.sentinel.av.core.ActivityLogger;
 import com.sentinel.av.core.ProcessInspector;
+import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.StatusBadge;
 
 import javax.swing.*;
@@ -22,7 +23,7 @@ public class ProcessPanel extends JPanel {
     public ProcessPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(24, 27, 33));
+        setBackground(CyberPalette.BACKGROUND);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         initComponents();
@@ -32,19 +33,19 @@ public class ProcessPanel extends JPanel {
     private void initComponents() {
         // --- Top Header Card ---
         JPanel topCard = new JPanel(new BorderLayout(10, 10));
-        topCard.setBackground(new Color(33, 37, 44));
+        topCard.setBackground(CyberPalette.SURFACE);
         topCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
         JLabel titleLabel = new JLabel("⚙️ System Process & Memory Inspector");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(CyberPalette.TEXT_PRIMARY);
 
         countLabel = new JLabel("Active Processes: 0");
         countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        countLabel.setForeground(new Color(170, 185, 205));
+        countLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         JPanel titleGroup = new JPanel(new GridLayout(2, 1, 4, 4));
         titleGroup.setOpaque(false);
@@ -66,7 +67,7 @@ public class ProcessPanel extends JPanel {
 
         JButton scanProcBtn = new JButton("🔍 Scan Process Binary");
         scanProcBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        scanProcBtn.setBackground(new Color(40, 120, 200));
+        scanProcBtn.setBackground(CyberPalette.ACCENT);
         scanProcBtn.setForeground(Color.WHITE);
         scanProcBtn.addActionListener(e -> scanSelectedProcess());
 
@@ -87,9 +88,9 @@ public class ProcessPanel extends JPanel {
 
         // --- Center Table Card ---
         JPanel tableCard = new JPanel(new BorderLayout(10, 10));
-        tableCard.setBackground(new Color(33, 37, 44));
+        tableCard.setBackground(CyberPalette.SURFACE);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(50, 56, 68), 1),
+            BorderFactory.createLineBorder(CyberPalette.BORDER, 1),
             new EmptyBorder(15, 20, 15, 20)
         ));
 
@@ -100,14 +101,15 @@ public class ProcessPanel extends JPanel {
         };
 
         processTable = new JTable(tableModel);
-        processTable.setBackground(new Color(25, 29, 36));
-        processTable.setForeground(Color.WHITE);
-        processTable.setGridColor(new Color(45, 52, 65));
+        processTable.setBackground(CyberPalette.BACKGROUND);
+        processTable.setForeground(CyberPalette.TEXT_PRIMARY);
+        processTable.setGridColor(CyberPalette.BORDER);
         processTable.setRowHeight(28);
         processTable.setFont(new Font("Consolas", Font.PLAIN, 12));
         processTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        processTable.getTableHeader().setBackground(new Color(38, 44, 54));
-        processTable.getTableHeader().setForeground(new Color(200, 215, 235));
+        processTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
+        processTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        processTable.setAutoCreateRowSorter(true);
 
         // Risk Level Cell Renderer
         processTable.getColumnModel().getColumn(2).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
@@ -118,12 +120,21 @@ public class ProcessPanel extends JPanel {
         });
 
         JScrollPane scrollPane = new JScrollPane(processTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 
         add(topCard, BorderLayout.NORTH);
         add(tableCard, BorderLayout.CENTER);
+    }
+
+    /** Maps the selected view row to the model index, so sorting stays consistent. */
+    private int selectedModelRow() {
+        int viewRow = processTable.getSelectedRow();
+        if (viewRow < 0) {
+            return -1;
+        }
+        return processTable.convertRowIndexToModel(viewRow);
     }
 
     public void refreshProcesses() {
@@ -156,7 +167,7 @@ public class ProcessPanel extends JPanel {
     }
 
     private void scanSelectedProcess() {
-        int selectedRow = processTable.getSelectedRow();
+        int selectedRow = selectedModelRow();
         if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this, "Please select a process from the table.", "No Process Selected", JOptionPane.WARNING_MESSAGE);
             return;
@@ -176,7 +187,7 @@ public class ProcessPanel extends JPanel {
     }
 
     private void terminateSelectedProcess() {
-        int selectedRow = processTable.getSelectedRow();
+        int selectedRow = selectedModelRow();
         if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this, "Please select a process to terminate.", "No Process Selected", JOptionPane.WARNING_MESSAGE);
             return;
@@ -185,11 +196,13 @@ public class ProcessPanel extends JPanel {
         long pid = (long) tableModel.getValueAt(selectedRow, 0);
         String name = (String) tableModel.getValueAt(selectedRow, 1);
 
-        int confirm = JOptionPane.showConfirmDialog(this,
+        Object[] options = {"Terminate", "Cancel"};
+        int confirm = JOptionPane.showOptionDialog(this,
             "Are you sure you want to FORCE TERMINATE process: " + name + " (PID: " + pid + ")?",
-            "Confirm Process Termination", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            "Confirm Process Termination", JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+            null, options, options[1]);
 
-        if (confirm == JOptionPane.YES_OPTION) {
+        if (confirm == 0) {
             if (ProcessInspector.terminateProcess(pid)) {
                 ActivityLogger.getInstance().warning("ProcessInspector", "Terminated process " + name + " (PID: " + pid + ")");
                 refreshProcesses();

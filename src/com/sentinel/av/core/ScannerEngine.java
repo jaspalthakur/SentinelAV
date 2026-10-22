@@ -15,6 +15,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ScannerEngine {
 
     public interface ScanProgressListener {
+        /** Called once after the file list is collected, with the planned scan size. */
+        default void onScanStarted(int totalFiles) {
+        }
+
         void onProgress(File currentFile, int scannedCount, long totalBytes, String currentPath);
         void onThreatDetected(ScanResult result);
         void onScanComplete(List<ScanResult> allResults, List<ScanResult> threats, long durationMs);
@@ -65,6 +69,13 @@ public class ScannerEngine {
                 "Starting " + mode + " on " + describeTarget(target, mode) + " (" + fileList.size() + " files)");
 
         int fileCount = fileList.size();
+        if (listener != null) {
+            try {
+                listener.onScanStarted(fileCount);
+            } catch (RuntimeException ignored) {
+                // A broken UI listener must never abort the scan.
+            }
+        }
         ScanResult[] results = new ScanResult[fileCount];
         AtomicInteger nextIndex = new AtomicInteger(0);
         AtomicInteger scannedCount = new AtomicInteger(0);

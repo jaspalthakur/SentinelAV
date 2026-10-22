@@ -4,12 +4,16 @@ import com.sentinel.av.core.QuarantineManager;
 import com.sentinel.av.core.ScannerEngine;
 import com.sentinel.av.model.ScanResult;
 import com.sentinel.av.ui.components.CyberCard;
+import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.StatusBadge;
+import com.sentinel.av.ui.components.ThreatDetailDialog;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -41,6 +45,9 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
     private JTable threatsTable;
     private final List<ScanResult> currentThreats = new ArrayList<>();
 
+    /** Planned scan size, reported once by the engine before the workers start. */
+    private volatile int totalFiles = 0;
+
     private SwingWorker<Void, Void> currentScanWorker;
     private long startTime;
     private Timer elapsedTimer;
@@ -48,7 +55,7 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
     public ScannerPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(20, 23, 29));
+        setBackground(CyberPalette.BACKGROUND);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         initComponents();
@@ -56,7 +63,7 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
 
     private void initComponents() {
         // --- Top Selection Card ---
-        CyberCard topCard = new CyberCard(new Color(50, 58, 72));
+        CyberCard topCard = new CyberCard(CyberPalette.BORDER);
 
         JLabel titleLabel = new JLabel("🔍 Multi-Engine Malware Scanner");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -113,7 +120,7 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         topCard.add(configContainer, BorderLayout.CENTER);
 
         // --- Progress Section Card ---
-        CyberCard progressCard = new CyberCard(new Color(50, 58, 72));
+        CyberCard progressCard = new CyberCard(CyberPalette.BORDER);
 
         progressBar = new JProgressBar(0, 100);
         progressBar.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -184,7 +191,7 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         progressCard.add(btnRow, BorderLayout.SOUTH);
 
         // --- Center Results Table Card ---
-        CyberCard tableCard = new CyberCard(new Color(50, 58, 72));
+        CyberCard tableCard = new CyberCard(CyberPalette.BORDER);
 
         JLabel tableTitle = new JLabel("🚨 Intercepted Malware Detections");
         tableTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
@@ -196,15 +203,38 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
             public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        threatsTable = new JTable(threatsTableModel);
-        threatsTable.setBackground(new Color(25, 29, 36));
-        threatsTable.setForeground(Color.WHITE);
-        threatsTable.setGridColor(new Color(45, 52, 65));
+        threatsTable = new JTable(threatsTableModel) {
+            @Override
+            public String getToolTipText(MouseEvent e) {
+                java.awt.Point p = e.getPoint();
+                int viewRow = rowAtPoint(p);
+                int viewCol = columnAtPoint(p);
+                if (viewRow < 0 || viewCol < 0) {
+                    return null;
+                }
+                int modelRow = convertRowIndexToModel(viewRow);
+                int modelCol = convertColumnIndexToModel(viewCol);
+                Object value = threatsTableModel.getValueAt(modelRow, modelCol);
+                return value != null ? value.toString() : null;
+            }
+        };
+        threatsTable.setBackground(CyberPalette.BACKGROUND);
+        threatsTable.setForeground(CyberPalette.TEXT_PRIMARY);
+        threatsTable.setGridColor(CyberPalette.BORDER);
         threatsTable.setRowHeight(28);
         threatsTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         threatsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        threatsTable.getTableHeader().setBackground(new Color(38, 44, 54));
-        threatsTable.getTableHeader().setForeground(new Color(200, 215, 235));
+        threatsTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
+        threatsTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
+        threatsTable.setAutoCreateRowSorter(true);
+        threatsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        threatsTable.setToolTipText("");
+
+        // Column sizing: keep the action buttons readable, give the path room.
+        int[] widths = {200, 220, 110, 260, 120, 460};
+        for (int i = 0; i < widths.length && i < threatsTable.getColumnCount(); i++) {
+            threatsTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+        }
 
         // Severity renderer
         threatsTable.getColumnModel().getColumn(2).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
@@ -222,8 +252,21 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
             return new JLabel("");
         });
 
+        // Double-click a detection to review its full risk analysis
+        threatsTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int modelRow = threatsTable.convertRowIndexToModel(threatsTable.getSelectedRow());
+                    if (modelRow >= 0 && modelRow < currentThreats.size()) {
+                        showThreatDetail(modelRow);
+                    }
+                }
+            }
+        });
+
         JScrollPane scrollPane = new JScrollPane(threatsTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
         tableCard.add(tableTitle, BorderLayout.NORTH);
         tableCard.add(scrollPane, BorderLayout.CENTER);
@@ -284,7 +327,10 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         // Reset UI
         threatsTableModel.setRowCount(0);
         currentThreats.clear();
+        totalFiles = 0;
         progressBar.setIndeterminate(true);
+        progressBar.setValue(0);
+        progressBar.setString("");
         progressStatusLabel.setText("Initializing scanner engine & YARA definitions...");
         countLabel.setText("Files Scanned: 0");
         startScanBtn.setEnabled(false);
@@ -320,13 +366,67 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
     }
 
     @Override
+    public void onScanStarted(int totalFiles) {
+        SwingUtilities.invokeLater(() -> {
+            this.totalFiles = Math.max(totalFiles, 1);
+            progressBar.setIndeterminate(false);
+            progressBar.setMaximum(this.totalFiles);
+            progressBar.setValue(0);
+            updateProgressString(0);
+        });
+    }
+
+    @Override
     public void onProgress(File currentFile, int scannedCount, long totalBytes, String currentPath) {
         SwingUtilities.invokeLater(() -> {
-            progressBar.setIndeterminate(false);
-            progressBar.setValue(scannedCount % 100);
-            progressStatusLabel.setText("Scanning: " + currentFile.getName());
+            progressBar.setValue(Math.min(scannedCount, progressBar.getMaximum()));
+            updateProgressString(scannedCount);
+            progressStatusLabel.setText("Scanning: " + currentPath);
+            progressStatusLabel.setToolTipText(currentPath);
             countLabel.setText("Files Scanned: " + scannedCount);
         });
+    }
+
+    private void updateProgressString(int scannedCount) {
+        int percent = (int) ((scannedCount * 100L) / Math.max(totalFiles, 1));
+        progressBar.setString(scannedCount + " / " + totalFiles + " files  (" + percent + "%)");
+    }
+
+    private void showThreatDetail(int modelRow) {
+        ScanResult result = currentThreats.get(modelRow);
+        ThreatDetailDialog dialog = new ThreatDetailDialog(
+                SwingUtilities.getWindowAncestor(this),
+                result,
+                () -> quarantineSingle(modelRow),
+                () -> deleteSingle(modelRow));
+        dialog.setVisible(true);
+    }
+
+    private void quarantineSingle(int modelRow) {
+        ScanResult result = currentThreats.get(modelRow);
+        if (QuarantineManager.getInstance().quarantineFile(result)) {
+            threatsTableModel.setValueAt("QUARANTINED", modelRow, 4);
+        }
+        mainFrame.updateDashboardStats();
+    }
+
+    private void deleteSingle(int modelRow) {
+        ScanResult result = currentThreats.get(modelRow);
+        int confirm = confirmPermanentDelete("this file: " + result.getFileName());
+        if (confirm != JOptionPane.OK_OPTION) {
+            return;
+        }
+        try {
+            if (result.getFile() != null && result.getFile().exists()) {
+                Files.delete(result.getFile().toPath());
+            }
+            result.setStatus(ScanResult.ThreatStatus.DELETED);
+            threatsTableModel.setValueAt("DELETED", modelRow, 4);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Failed to delete file: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        mainFrame.updateDashboardStats();
     }
 
     @Override
@@ -351,7 +451,8 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         SwingUtilities.invokeLater(() -> {
             if (elapsedTimer != null) elapsedTimer.stop();
             progressBar.setIndeterminate(false);
-            progressBar.setValue(100);
+            progressBar.setValue(progressBar.getMaximum());
+            updateProgressString(progressBar.getValue());
 
             startScanBtn.setEnabled(true);
             cancelScanBtn.setEnabled(false);
@@ -375,16 +476,14 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
 
     private void quarantineAllThreats() {
         int count = 0;
-        for (ScanResult res : new ArrayList<>(currentThreats)) {
+        for (int i = 0; i < currentThreats.size(); i++) {
+            ScanResult res = currentThreats.get(i);
             if (res.getStatus() == ScanResult.ThreatStatus.INFECTED) {
                 if (QuarantineManager.getInstance().quarantineFile(res)) {
                     count++;
+                    threatsTableModel.setValueAt("QUARANTINED", i, 4);
                 }
             }
-        }
-
-        for (int i = 0; i < threatsTableModel.getRowCount(); i++) {
-            threatsTableModel.setValueAt("QUARANTINED", i, 4);
         }
 
         JOptionPane.showMessageDialog(this, count + " threat files isolated into Quarantine Vault.", "Quarantine Success", JOptionPane.INFORMATION_MESSAGE);
@@ -393,25 +492,31 @@ public class ScannerPanel extends JPanel implements ScannerEngine.ScanProgressLi
         mainFrame.updateDashboardStats();
     }
 
-    private void deleteAllThreats() {
-        int confirm = JOptionPane.showConfirmDialog(this,
-            "Are you sure you want to PERMANENTLY DELETE all detected threat files?",
-            "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+    /** Delete confirmations always default to CANCEL so Enter can never destroy data. */
+    private int confirmPermanentDelete(String description) {
+        Object[] options = {"Delete Forever", "Cancel"};
+        return JOptionPane.showOptionDialog(this,
+                "Are you sure you want to PERMANENTLY DELETE " + description + "?\nThis action cannot be undone.",
+                "Confirm Delete",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+                null, options, options[1]);
+    }
 
-        if (confirm == JOptionPane.YES_OPTION) {
+    private void deleteAllThreats() {
+        int confirm = confirmPermanentDelete("all " + currentThreats.size() + " detected threat files");
+
+        if (confirm == 0) {
             int count = 0;
-            for (ScanResult res : new ArrayList<>(currentThreats)) {
+            for (int i = 0; i < currentThreats.size(); i++) {
+                ScanResult res = currentThreats.get(i);
                 if (res.getFile() != null && res.getFile().exists()) {
                     try {
                         Files.delete(res.getFile().toPath());
                         res.setStatus(ScanResult.ThreatStatus.DELETED);
                         count++;
+                        threatsTableModel.setValueAt("DELETED", i, 4);
                     } catch (Exception ignored) {}
                 }
-            }
-
-            for (int i = 0; i < threatsTableModel.getRowCount(); i++) {
-                threatsTableModel.setValueAt("DELETED", i, 4);
             }
 
             JOptionPane.showMessageDialog(this, count + " threat files permanently deleted.", "Delete Success", JOptionPane.INFORMATION_MESSAGE);

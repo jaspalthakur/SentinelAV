@@ -1,6 +1,7 @@
 package com.sentinel.av.ui;
 
 import com.sentinel.av.ui.components.CyberCard;
+import com.sentinel.av.ui.components.CyberPalette;
 import com.sentinel.av.ui.components.StatusBadge;
 
 import javax.swing.*;
@@ -18,7 +19,7 @@ public class AttackCoveragePanel extends JPanel {
     public AttackCoveragePanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(20, 23, 29));
+        setBackground(CyberPalette.BACKGROUND);
         setBorder(new EmptyBorder(25, 25, 25, 25));
 
         initComponents();
@@ -27,7 +28,7 @@ public class AttackCoveragePanel extends JPanel {
 
     private void initComponents() {
         // --- Top Header Card ---
-        CyberCard topCard = new CyberCard(new Color(50, 58, 72));
+        CyberCard topCard = new CyberCard(CyberPalette.BORDER);
 
         JLabel titleLabel = new JLabel("🎯 MITRE ATT&CK® Threat Technique Matrix & Coverage");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -35,7 +36,7 @@ public class AttackCoveragePanel extends JPanel {
 
         JLabel subLabel = new JLabel("Live Rule Engine Coverage mapped against adversary Tactics & Techniques");
         subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        subLabel.setForeground(new Color(170, 185, 205));
+        subLabel.setForeground(CyberPalette.TEXT_SECONDARY);
 
         JPanel titleGroup = new JPanel(new GridLayout(2, 1, 2, 2));
         titleGroup.setOpaque(false);
@@ -47,7 +48,7 @@ public class AttackCoveragePanel extends JPanel {
 
         JButton exportStixBtn = new JButton("💾 Export STIX 2.1 Threat Report");
         exportStixBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        exportStixBtn.setBackground(new Color(59, 130, 246));
+        exportStixBtn.setBackground(CyberPalette.ACCENT);
         exportStixBtn.setForeground(Color.WHITE);
         exportStixBtn.addActionListener(e -> exportStixReport());
 
@@ -57,7 +58,7 @@ public class AttackCoveragePanel extends JPanel {
         topCard.add(btnRow, BorderLayout.EAST);
 
         // --- Center Heatmap Table Card ---
-        CyberCard tableCard = new CyberCard(new Color(50, 58, 72));
+        CyberCard tableCard = new CyberCard(CyberPalette.BORDER);
 
         String[] cols = {"Technique ID", "Tactic Name", "Technique Title", "Detection Engine", "Status / Coverage", "MITRE Reference"};
         tableModel = new DefaultTableModel(cols, 0) {
@@ -66,14 +67,14 @@ public class AttackCoveragePanel extends JPanel {
         };
 
         JTable matrixTable = new JTable(tableModel);
-        matrixTable.setBackground(new Color(25, 29, 36));
+        matrixTable.setBackground(CyberPalette.BACKGROUND);
         matrixTable.setForeground(Color.WHITE);
-        matrixTable.setGridColor(new Color(45, 52, 65));
+        matrixTable.setGridColor(CyberPalette.BORDER);
         matrixTable.setRowHeight(30);
         matrixTable.setFont(new Font("Consolas", Font.PLAIN, 12));
         matrixTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        matrixTable.getTableHeader().setBackground(new Color(38, 44, 54));
-        matrixTable.getTableHeader().setForeground(new Color(200, 215, 235));
+        matrixTable.getTableHeader().setBackground(CyberPalette.SURFACE_HOVER);
+        matrixTable.getTableHeader().setForeground(CyberPalette.TEXT_PRIMARY);
 
         // Coverage badge renderer
         matrixTable.getColumnModel().getColumn(4).setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
@@ -84,7 +85,7 @@ public class AttackCoveragePanel extends JPanel {
         });
 
         JScrollPane scrollPane = new JScrollPane(matrixTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(45, 52, 65)));
+        scrollPane.setBorder(BorderFactory.createLineBorder(CyberPalette.BORDER));
 
         tableCard.add(scrollPane, BorderLayout.CENTER);
 

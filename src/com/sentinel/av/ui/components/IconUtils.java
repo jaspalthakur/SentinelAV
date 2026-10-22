@@ -6,6 +6,17 @@ import java.awt.geom.Path2D;
 
 public class IconUtils {
 
+    /** Renders the shield icon into an ARGB image usable with JFrame#setIconImage. */
+    public static Image createAppIcon(int size) {
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(
+                size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = img.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        getIcon(IconType.SHIELD_OK, CyberPalette.ACCENT, size).paintIcon(null, g2, 0, 0);
+        g2.dispose();
+        return img;
+    }
+
     public enum IconType {
         HOME, SCAN, PROTECTION, QUARANTINE, UPDATES, HISTORY, ADVANCED, SETTINGS, SHIELD_OK, WARNING, THREAT
     }
