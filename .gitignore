@@ -1,0 +1,21 @@
+# ---- Build output ----
+bin/
+out/
+SentinelAV.jar
+sources.txt
+MANIFEST.MF
+*.class
+
+# ---- Runtime data (created under %USERPROFILE%\.sentinel_av) ----
+.sentinel_av/
+
+# ---- IDE / tooling ----
+.qodo/
+.idea/
+.vscode/
+*.iml
+
+# ---- OS / logs ----
+Thumbs.db
+Desktop.ini
+*.log
