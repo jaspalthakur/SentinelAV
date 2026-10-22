@@ -70,7 +70,7 @@ public class MainFrame extends JFrame {
         brandTitle.setFont(new Font("Segoe UI", Font.BOLD, 19));
         brandTitle.setForeground(Color.WHITE);
 
-        JLabel brandSub = new JLabel("v3.5 EDR & Threat Engine");
+        JLabel brandSub = new JLabel("v3.6 EDR & Threat Engine");
         brandSub.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         brandSub.setForeground(new Color(16, 185, 129));
 

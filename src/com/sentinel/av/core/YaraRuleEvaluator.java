@@ -3,108 +3,121 @@ package com.sentinel.av.core;
 import com.sentinel.av.model.VirusSignature;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
-public class YaraRuleEvaluator {
+public final class YaraRuleEvaluator {
 
     public static class RuleMatch {
         private final String ruleName;
         private final VirusSignature.Severity severity;
         private final String description;
+        private final String attackTechnique;
 
         public RuleMatch(String ruleName, VirusSignature.Severity severity, String description) {
+            this(ruleName, severity, description, null);
+        }
+
+        public RuleMatch(String ruleName, VirusSignature.Severity severity, String description, String attackTechnique) {
             this.ruleName = ruleName;
             this.severity = severity;
             this.description = description;
+            this.attackTechnique = attackTechnique;
         }
 
         public String getRuleName() { return ruleName; }
         public VirusSignature.Severity getSeverity() { return severity; }
         public String getDescription() { return description; }
+        public String getAttackTechnique() { return attackTechnique; }
+    }
+
+    private static final Set<String> EXECUTABLE_EXTENSIONS = Set.of(".exe", ".dll", ".sys", ".scr", ".com");
+
+    private YaraRuleEvaluator() {
     }
 
     public static List<RuleMatch> evaluateRules(File file) {
+        if (file == null || !file.isFile() || file.length() == 0) {
+            return new ArrayList<>();
+        }
+        return evaluateRules(TextProbe.readPrefix(file), file.getName().toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Evaluates the built-in rule set against content already read by the caller, so a
+     * single file read can feed YARA, pattern signatures and entropy checks.
+     *
+     * @param content       leading file bytes decoded as ISO-8859-1 (may be empty)
+     * @param fileNameLower lowercase file name, used by the masquerading rule
+     */
+    public static List<RuleMatch> evaluateRules(String content, String fileNameLower) {
         List<RuleMatch> matches = new ArrayList<>();
-        if (file == null || !file.exists() || !file.isFile() || file.length() == 0) {
+        if (content == null || content.isEmpty()) {
             return matches;
         }
+        String name = fileNameLower != null ? fileNameLower : "";
 
-        String fileNameLower = file.getName().toLowerCase();
+        // 1. Executable PE header inside a non-executable file (T1036.005)
+        if (content.length() >= 2 && content.charAt(0) == 'M' && content.charAt(1) == 'Z'
+                && !hasExecutableExtension(name)) {
+            matches.add(new RuleMatch(
+                    "YARA.Suspicious.DisguisedPEHeader",
+                    VirusSignature.Severity.CRITICAL,
+                    "Executable PE header 'MZ' detected inside non-executable file",
+                    "T1036.005"));
+        }
 
-        // 1. Check Disguised PE Executable Header (File starts with 'MZ' but extension is non-exe)
-        try (InputStream is = new FileInputStream(file)) {
-            byte[] header = new byte[2];
-            int read = is.read(header);
-            if (read == 2 && header[0] == 'M' && header[1] == 'Z') {
-                if (!fileNameLower.endsWith(".exe") && !fileNameLower.endsWith(".dll") && 
-                    !fileNameLower.endsWith(".sys") && !fileNameLower.endsWith(".scr")) {
-                    matches.add(new RuleMatch(
-                        "YARA.Suspicious.DisguisedPEHeader",
-                        VirusSignature.Severity.CRITICAL,
-                        "Executable PE header 'MZ' detected inside non-executable file (" + file.getName() + ")"
-                    ));
-                }
-            }
-        } catch (Exception ignored) {}
+        // 2. PowerShell download / execution cradle (T1059.001)
+        if (content.contains("powershell -enc") || content.contains("powershell -e ")
+                || content.contains("-ExecutionPolicy Bypass -WindowStyle Hidden")
+                || content.contains("IEX (New-Object Net.WebClient)")) {
+            matches.add(new RuleMatch(
+                    "YARA.Script.ObfuscatedPowerShellDownloader",
+                    VirusSignature.Severity.HIGH,
+                    "Suspicious hidden/encoded PowerShell script execution sequence.",
+                    "T1059.001"));
+        }
 
-        // 2. Text / Binary String Pattern Inspection (inspect up to first 1MB)
-        if (file.length() < 10 * 1024 * 1024) {
-            try (InputStream is = new FileInputStream(file)) {
-                byte[] buffer = new byte[16384];
-                int bytesRead;
-                StringBuilder sb = new StringBuilder();
-                int totalRead = 0;
-                while ((bytesRead = is.read(buffer)) != -1 && totalRead < 1024 * 1024) {
-                    sb.append(new String(buffer, 0, bytesRead, "ISO-8859-1"));
-                    totalRead += bytesRead;
-                }
+        // 3. Remote process injection API strings (T1055)
+        if (content.contains("VirtualAllocEx") && content.contains("WriteProcessMemory")
+                && content.contains("CreateRemoteThread")) {
+            matches.add(new RuleMatch(
+                    "YARA.Trojan.ProcessInjectionStrings",
+                    VirusSignature.Severity.HIGH,
+                    "Found Windows API function strings associated with remote process memory injection.",
+                    "T1055"));
+        }
 
-                String content = sb.toString();
+        // 4. Base64 encoded PE payload (T1027)
+        if (content.contains("TVqQAAMAAAAEAAAA") || content.contains("TVpQAA")) {
+            matches.add(new RuleMatch(
+                    "YARA.Payload.Base64EncodedExecutable",
+                    VirusSignature.Severity.HIGH,
+                    "Base64 encoded PE binary payload pattern matched.",
+                    "T1027"));
+        }
 
-                // Process Injection API String Rule
-                if (content.contains("VirtualAllocEx") && content.contains("WriteProcessMemory") && content.contains("CreateRemoteThread")) {
-                    matches.add(new RuleMatch(
-                        "YARA.Trojan.ProcessInjectionStrings",
-                        VirusSignature.Severity.HIGH,
-                        "Found Windows API function strings associated with remote process memory injection."
-                    ));
-                }
-
-                // Obfuscated PowerShell Execution Rule
-                if (content.contains("powershell -enc") || content.contains("powershell -e ") || 
-                    content.contains("-ExecutionPolicy Bypass -WindowStyle Hidden")) {
-                    matches.add(new RuleMatch(
-                        "YARA.Script.ObfuscatedPowerShellDownloader",
-                        VirusSignature.Severity.HIGH,
-                        "Suspicious hidden/encoded PowerShell script execution sequence."
-                    ));
-                }
-
-                // Base64 Encoded PE Executable Rule
-                if (content.contains("TVqQAAMAAAAEAAAA") || content.contains("TVpQAA")) {
-                    matches.add(new RuleMatch(
-                        "YARA.Payload.Base64EncodedExecutable",
-                        VirusSignature.Severity.HIGH,
-                        "Base64 encoded PE binary payload pattern matched."
-                    ));
-                }
-
-                // Ransom Note String Rule
-                if (content.contains("YOUR_FILES_HAVE_BEEN_ENCRYPTED") || content.contains("DECRYPT_YOUR_FILES") ||
-                    content.contains("ALL_YOUR_FILES_ARE_LOCKED")) {
-                    matches.add(new RuleMatch(
-                        "YARA.Ransomware.RansomNoteText",
-                        VirusSignature.Severity.CRITICAL,
-                        "Ransomware demand note text pattern matched."
-                    ));
-                }
-
-            } catch (Exception ignored) {}
+        // 5. Ransom note text (T1486)
+        if (content.contains("YOUR_FILES_HAVE_BEEN_ENCRYPTED") || content.contains("DECRYPT_YOUR_FILES")
+                || content.contains("ALL_YOUR_FILES_ARE_LOCKED")) {
+            matches.add(new RuleMatch(
+                    "YARA.Ransomware.RansomNoteText",
+                    VirusSignature.Severity.CRITICAL,
+                    "Ransomware demand note text pattern matched.",
+                    "T1486"));
         }
 
         return matches;
+    }
+
+    private static boolean hasExecutableExtension(String name) {
+        for (String ext : EXECUTABLE_EXTENSIONS) {
+            if (name.endsWith(ext)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

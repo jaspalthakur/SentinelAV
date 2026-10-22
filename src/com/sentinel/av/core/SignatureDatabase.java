@@ -3,19 +3,30 @@ package com.sentinel.av.core;
 import com.sentinel.av.model.VirusSignature;
 import com.sentinel.av.model.VirusSignature.Severity;
 
-import java.io.*;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SignatureDatabase {
     private static SignatureDatabase instance;
+
     private final Map<String, VirusSignature> md5Signatures = new ConcurrentHashMap<>();
     private final Map<String, VirusSignature> sha256Signatures = new ConcurrentHashMap<>();
-    private final List<VirusSignature> patternSignatures = new ArrayList<>();
-    private final Path storagePath = Paths.get(System.getProperty("user.home"), ".sentinel_av", "signatures.db");
+    /** Keyed by signature id so re-loading the store cannot accumulate duplicates. */
+    private final Map<String, VirusSignature> patternSignatures = new LinkedHashMap<>();
+    /** Signatures added at runtime (or restored from disk); the only ones persisted. */
+    private final List<VirusSignature> customSignatures = new ArrayList<>();
+
+    private final Path storagePath = AppPaths.signatureFile();
 
     private SignatureDatabase() {
         loadDefaults();
@@ -95,7 +106,8 @@ public class SignatureDatabase {
             "__LOCKED_BY_SENTINEL_RANSOMTEST__",
             Severity.CRITICAL,
             "Ransomware header pattern simulation.",
-            true
+            true,
+            "T1486"
         ));
 
         // Suspicious Powershell Dropper Pattern
@@ -105,45 +117,64 @@ public class SignatureDatabase {
             "Invoke-Expression (New-Object System.Net.WebClient).DownloadString",
             Severity.MEDIUM,
             "Suspicious PowerShell remote execution pattern.",
-            true
+            true,
+            "T1059.001"
         ));
     }
 
     private void addSignatureInternal(VirusSignature sig) {
+        if (sig == null) {
+            return;
+        }
         if (sig.isPattern()) {
-            patternSignatures.add(sig);
-        } else if ("MD5".equalsIgnoreCase(sig.getHashType())) {
-            md5Signatures.put(sig.getHash().toLowerCase(), sig);
-        } else if ("SHA-256".equalsIgnoreCase(sig.getHashType())) {
-            sha256Signatures.put(sig.getHash().toLowerCase(), sig);
+            patternSignatures.put(sig.getId(), sig);
+        } else if ("MD5".equalsIgnoreCase(sig.getHashType()) && sig.getHash() != null) {
+            md5Signatures.put(sig.getHash().toLowerCase(Locale.ROOT), sig);
+        } else if ("SHA-256".equalsIgnoreCase(sig.getHashType()) && sig.getHash() != null) {
+            sha256Signatures.put(sig.getHash().toLowerCase(Locale.ROOT), sig);
         }
     }
 
     public synchronized void addCustomSignature(VirusSignature sig) {
+        if (sig == null) {
+            return;
+        }
+        if (sig.getId() == null || sig.getId().isBlank()) {
+            sig = new VirusSignature("CUSTOM-" + UUID.randomUUID(),
+                    sig.getName(), sig.getHash() != null ? sig.getHash() : sig.getPattern(),
+                    sig.getHashType(), sig.getSeverity(), sig.getDescription());
+        }
         addSignatureInternal(sig);
+        customSignatures.add(sig);
         saveCustomSignatures();
     }
 
     public VirusSignature findByMD5(String md5) {
-        if (md5 == null) return null;
-        return md5Signatures.get(md5.toLowerCase());
+        if (md5 == null) {
+            return null;
+        }
+        return md5Signatures.get(md5.toLowerCase(Locale.ROOT));
     }
 
     public VirusSignature findBySHA256(String sha256) {
-        if (sha256 == null) return null;
-        return sha256Signatures.get(sha256.toLowerCase());
+        if (sha256 == null) {
+            return null;
+        }
+        return sha256Signatures.get(sha256.toLowerCase(Locale.ROOT));
     }
 
     public List<VirusSignature> getPatternSignatures() {
-        return Collections.unmodifiableList(patternSignatures);
+        synchronized (patternSignatures) {
+            return List.copyOf(patternSignatures.values());
+        }
     }
 
     public List<VirusSignature> getAllSignatures() {
         List<VirusSignature> all = new ArrayList<>();
         all.addAll(md5Signatures.values());
         all.addAll(sha256Signatures.values());
-        all.addAll(patternSignatures);
-        return all;
+        all.addAll(getPatternSignatures());
+        return Collections.unmodifiableList(all);
     }
 
     public int getSignatureCount() {
@@ -152,26 +183,43 @@ public class SignatureDatabase {
 
     private void saveCustomSignatures() {
         try {
-            Files.createDirectories(storagePath.getParent());
-            try (ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(storagePath))) {
-                List<VirusSignature> customList = getAllSignatures();
-                oos.writeObject(customList);
+            Path parent = storagePath.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
             }
+            Path tmp = storagePath.resolveSibling(storagePath.getFileName() + ".tmp");
+            try (ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(tmp))) {
+                oos.writeObject(new ArrayList<>(customSignatures));
+            }
+            Files.move(tmp, storagePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {
-            // Ignore if write fails
+            // Signature persistence is best-effort; scanning continues regardless.
         }
     }
 
     @SuppressWarnings("unchecked")
     private void loadCustomSignatures() {
-        if (!Files.exists(storagePath)) return;
+        if (!Files.exists(storagePath)) {
+            return;
+        }
         try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(storagePath))) {
-            List<VirusSignature> list = (List<VirusSignature>) ois.readObject();
-            for (VirusSignature sig : list) {
+            Object read = ois.readObject();
+            if (!(read instanceof List<?> list)) {
+                return;
+            }
+            for (Object entry : list) {
+                if (!(entry instanceof VirusSignature sig)) {
+                    continue;
+                }
+                // Older builds persisted every default signature too; only keep custom ones.
+                if (sig.getId() != null && sig.getId().startsWith("SIG-")) {
+                    continue;
+                }
                 addSignatureInternal(sig);
+                customSignatures.add(sig);
             }
         } catch (Exception e) {
-            // Ignore error loading user custom signatures
+            // Corrupt or incompatible store: fall back to built-in signatures only.
         }
     }
 }

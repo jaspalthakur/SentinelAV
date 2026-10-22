@@ -22,6 +22,7 @@ public class ScanResult {
     private String detectionMethod;
     private int riskScore; // 0 to 100
     private List<String> reasons = new ArrayList<>();
+    private List<String> attackTechniques = new ArrayList<>();
     private ThreatStatus status;
     private LocalDateTime scanTime;
 
@@ -35,11 +36,13 @@ public class ScanResult {
         this.detectionMethod = "Clean";
         this.riskScore = 0;
         this.reasons = Collections.emptyList();
+        this.attackTechniques = Collections.emptyList();
         this.status = ThreatStatus.CLEAN;
         this.scanTime = LocalDateTime.now();
     }
 
-    public ScanResult(File file, long fileSize, RiskScoreEngine.RiskScoreBreakdown breakdown, String matchedHash, String detectionMethod) {
+    public ScanResult(File file, long fileSize, RiskScoreEngine.RiskScoreBreakdown breakdown,
+                      String matchedHash, String detectionMethod) {
         this.file = file;
         this.fileSize = fileSize;
         this.isInfected = breakdown.isInfected();
@@ -49,6 +52,7 @@ public class ScanResult {
         this.detectionMethod = detectionMethod;
         this.riskScore = breakdown.getScore();
         this.reasons = new ArrayList<>(breakdown.getReasons());
+        this.attackTechniques = new ArrayList<>(breakdown.getAttackTechniques());
         this.status = this.isInfected ? ThreatStatus.INFECTED : ThreatStatus.CLEAN;
         this.scanTime = LocalDateTime.now();
     }
@@ -64,6 +68,7 @@ public class ScanResult {
     public String getDetectionMethod() { return detectionMethod; }
     public int getRiskScore() { return riskScore; }
     public List<String> getReasons() { return Collections.unmodifiableList(reasons); }
+    public List<String> getAttackTechniques() { return Collections.unmodifiableList(attackTechniques); }
     public ThreatStatus getStatus() { return status; }
     public void setStatus(ThreatStatus status) { this.status = status; }
     public LocalDateTime getScanTime() { return scanTime; }

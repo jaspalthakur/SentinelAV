@@ -5,12 +5,25 @@ import com.sentinel.av.model.ActivityLog.LogLevel;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * In-memory activity log with bounded, asynchronous disk persistence.
+ *
+ * <p>Logging used to spawn one thread per entry; a 50k-file scan therefore created 50k
+ * threads. Entries are now handed to a single daemon writer with a fixed-size queue, and
+ * the in-memory ring keeps only the most recent {@value #MAX_IN_MEMORY} entries.</p>
+ */
 public class ActivityLogger {
     private static ActivityLogger instance;
 
@@ -18,14 +31,34 @@ public class ActivityLogger {
         void onLogAdded(ActivityLog log);
     }
 
-    private final List<ActivityLog> logs = new CopyOnWriteArrayList<>();
+    private static final int MAX_IN_MEMORY = 2000;
+    private static final int WRITE_QUEUE_CAPACITY = 8192;
+    private static final int MAX_MESSAGE_LENGTH = 4000;
+
+    private final Deque<ActivityLog> logs = new ArrayDeque<>();
     private final List<LogListener> listeners = new CopyOnWriteArrayList<>();
-    private final Path logFilePath = Paths.get(System.getProperty("user.home"), ".sentinel_av", "sentinel_activity.log");
+    private final Path logFilePath = AppPaths.logFile();
+    private final ThreadPoolExecutor writer;
 
     private ActivityLogger() {
         try {
-            Files.createDirectories(logFilePath.getParent());
-        } catch (IOException ignored) {}
+            Path parent = logFilePath.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+        } catch (IOException ignored) {
+            // Logging must never prevent the application from starting.
+        }
+
+        ThreadFactory factory = runnable -> {
+            Thread thread = new Thread(runnable, "Sentinel-LogWriter");
+            thread.setDaemon(true);
+            return thread;
+        };
+        writer = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(WRITE_QUEUE_CAPACITY), factory,
+                new ThreadPoolExecutor.DiscardOldestPolicy());
+        writer.allowCoreThreadTimeOut(false);
     }
 
     public static synchronized ActivityLogger getInstance() {
@@ -64,37 +97,60 @@ public class ActivityLogger {
     }
 
     private void log(LogLevel level, String category, String message) {
-        ActivityLog entry = new ActivityLog(level, category, message);
-        logs.add(entry);
+        String safeMessage = message != null && message.length() > MAX_MESSAGE_LENGTH
+                ? message.substring(0, MAX_MESSAGE_LENGTH) + "…"
+                : message;
+        ActivityLog entry = new ActivityLog(level, category, safeMessage);
 
-        // Keep last 1000 logs in memory
-        if (logs.size() > 1000) {
-            logs.remove(0);
+        synchronized (logs) {
+            if (logs.size() >= MAX_IN_MEMORY) {
+                logs.pollFirst();
+            }
+            logs.addLast(entry);
         }
 
-        // Notify UI listeners
-        for (LogListener l : listeners) {
-            l.onLogAdded(entry);
+        for (LogListener listener : listeners) {
+            try {
+                listener.onLogAdded(entry);
+            } catch (RuntimeException ignored) {
+                // A broken UI listener must not break logging.
+            }
         }
 
-        // Write to log file asynchronously
-        saveToFileAsync(entry);
+        if (!writer.isShutdown()) {
+            writer.execute(() -> appendToFile(entry));
+        }
     }
 
-    private void saveToFileAsync(ActivityLog entry) {
-        new Thread(() -> {
-            try (BufferedWriter writer = Files.newBufferedWriter(logFilePath, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
-                writer.write(String.format("[%s] [%s] [%s] %s%n", 
+    private void appendToFile(ActivityLog entry) {
+        try (BufferedWriter writerHandle = Files.newBufferedWriter(logFilePath,
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+            writerHandle.write(String.format("[%s] [%s] [%s] %s%n",
                     entry.getTimestamp(), entry.getLevel(), entry.getCategory(), entry.getMessage()));
-            } catch (IOException ignored) {}
-        }).start();
+        } catch (IOException ignored) {
+            // Best-effort persistence.
+        }
     }
 
     public List<ActivityLog> getLogs() {
-        return Collections.unmodifiableList(logs);
+        synchronized (logs) {
+            return List.copyOf(logs);
+        }
     }
 
     public void clearLogs() {
-        logs.clear();
+        synchronized (logs) {
+            logs.clear();
+        }
+    }
+
+    /** Drains queued log writes; used by tests and orderly shutdown. */
+    public void flush() {
+        writer.shutdown();
+        try {
+            writer.awaitTermination(2, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

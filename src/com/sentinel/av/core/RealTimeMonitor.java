@@ -83,6 +83,7 @@ public class RealTimeMonitor {
             }
 
             running.set(true);
+            lastProcessedMap.clear();
             scanThreadPool = Executors.newFixedThreadPool(4); // Bounded worker pool
             monitorExecutor = Executors.newSingleThreadExecutor();
             monitorExecutor.submit(this::processEvents);
@@ -118,6 +119,9 @@ public class RealTimeMonitor {
     }
 
     private void registerTree(Path start) {
+        if (watchService == null || start == null) {
+            return;
+        }
         try {
             Files.walkFileTree(start, new SimpleFileVisitor<>() {
                 @Override
@@ -152,7 +156,14 @@ public class RealTimeMonitor {
 
                 notifyFileDetected(fullPath, kind.name());
 
-                if (Files.exists(fullPath) && Files.isRegularFile(fullPath)) {
+                // Newly created folders join the watch tree, otherwise files dropped into
+                // a subdirectory created after startup would go unseen.
+                if (kind == StandardWatchEventKinds.ENTRY_CREATE && Files.isDirectory(fullPath)) {
+                    registerTree(fullPath);
+                    continue;
+                }
+
+                if (Files.isRegularFile(fullPath) && !isExcluded(fullPath)) {
                     // Debounce: Ignore duplicate file events within 1.5 seconds
                     long now = System.currentTimeMillis();
                     Long lastTime = lastProcessedMap.get(fullPath);
@@ -160,9 +171,12 @@ public class RealTimeMonitor {
                         continue;
                     }
                     lastProcessedMap.put(fullPath, now);
+                    evictStaleEntries(now);
 
                     // Submit to bounded thread pool
-                    scanThreadPool.submit(() -> debounceAndScan(fullPath));
+                    if (scanThreadPool != null && !scanThreadPool.isShutdown()) {
+                        scanThreadPool.submit(() -> debounceAndScan(fullPath));
+                    }
                 }
             }
 
@@ -203,6 +217,26 @@ public class RealTimeMonitor {
             QuarantineManager.getInstance().quarantineFile(result);
             notifyThreatIntercepted(result);
         }
+    }
+
+    /** Files inside our own data directory (vault, logs, signature store) are never scanned. */
+    private static boolean isExcluded(Path path) {
+        Path dataDir = AppPaths.dataDir();
+        if (path.startsWith(dataDir)) {
+            return true;
+        }
+        String name = path.getFileName() != null ? path.getFileName().toString() : "";
+        return name.endsWith(".sentinel_locked_vault")
+                || name.endsWith(".sentinel_restore")
+                || name.endsWith(".tmp");
+    }
+
+    /** Keeps the debounce map from growing without bound during long sessions. */
+    private void evictStaleEntries(long now) {
+        if (lastProcessedMap.size() < 2048) {
+            return;
+        }
+        lastProcessedMap.entrySet().removeIf(entry -> now - entry.getValue() > 60_000L);
     }
 
     private void notifyFileDetected(Path path, String eventType) {

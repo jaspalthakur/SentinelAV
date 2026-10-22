@@ -1,16 +1,16 @@
 package com.sentinel.av.core.engine;
 
 import com.sentinel.av.core.MagicByteUtils;
-import com.sentinel.av.core.YaraRuleEvaluator;
+import com.sentinel.av.core.TextProbe;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class BehaviorDetectionEngine implements DetectionEngine {
+
+    /** Content window inspected for behavioural markers. */
+    private static final int CONTENT_WINDOW = TextProbe.DEFAULT_LIMIT;
 
     @Override
     public String getEngineId() { return "behavior-sigma-engine"; }
@@ -20,8 +20,11 @@ public class BehaviorDetectionEngine implements DetectionEngine {
 
     @Override
     public EngineResult evaluate(FileContext context) {
+        if (context == null) {
+            return EngineResult.clean(getEngineId());
+        }
         File file = context.getFile();
-        if (file == null || !file.exists() || !file.isFile()) {
+        if (file == null || !file.isFile()) {
             return EngineResult.clean(getEngineId());
         }
 
@@ -30,56 +33,82 @@ public class BehaviorDetectionEngine implements DetectionEngine {
         List<String> attackTechniques = new ArrayList<>();
         String threatName = "None";
 
-        String nameLower = context.getFileName().toLowerCase();
+        String nameLower = context.getFileNameLower();
         boolean isExe = MagicByteUtils.isExecutableType(context.getMagicFileType());
 
         // 1. T1036.005 - Disguised PE Header
-        if (isExe && (nameLower.endsWith(".pdf") || nameLower.endsWith(".jpg") || nameLower.endsWith(".png") || nameLower.endsWith(".txt"))) {
+        if (isExe && isDocumentExtension(nameLower)) {
             score += 80;
-            reasons.add("Behavior Rule: Executable PE binary header disguised with innocent file extension (" + context.getFileName() + ")");
-            attackTechniques.add("T1036.005"); // Masquerading: Match Legitimate Name or Location
+            reasons.add("Behavior Rule: Executable PE binary header disguised with an innocent file extension ("
+                    + context.getFileName() + ")");
+            attackTechniques.add("T1036.005");
             threatName = "Behavior.Masquerading.DisguisedExecutable";
         }
 
-        // 2. T1059.001 - Encoded / Obfuscated PowerShell Command
-        if (file.length() < 5 * 1024 * 1024) {
-            try (InputStream is = new FileInputStream(file)) {
-                byte[] buf = new byte[16384];
-                int read = is.read(buf);
-                if (read > 0) {
-                    String content = new String(buf, 0, read, "ISO-8859-1");
+        // Content rules: one bounded read feeds every string check below.
+        String content = TextProbe.readPrefix(file, CONTENT_WINDOW);
+        if (!content.isEmpty()) {
+            String contentLower = content.toLowerCase(java.util.Locale.ROOT);
 
-                    if (content.contains("powershell -enc") || content.contains("powershell -e ") || content.contains("bypass -nop -w hidden")) {
-                        score += 70;
-                        reasons.add("Behavior Rule: Obfuscated or Encoded PowerShell execution sequence.");
-                        attackTechniques.add("T1059.001"); // Command and Scripting Interpreter: PowerShell
-                        if ("None".equals(threatName)) threatName = "Behavior.Script.ObfuscatedPowerShell";
-                    }
-
-                    // T1055 - Process Memory Injection APIs
-                    if (content.contains("VirtualAllocEx") && content.contains("WriteProcessMemory")) {
-                        score += 85;
-                        reasons.add("Behavior Rule: Process memory injection APIs detected.");
-                        attackTechniques.add("T1055"); // Process Injection
-                        if ("None".equals(threatName)) threatName = "Behavior.Injection.ProcessMemoryInjection";
-                    }
-
-                    // T1486 - Ransomware Note Header
-                    if (content.contains("YOUR_FILES_HAVE_BEEN_ENCRYPTED") || content.contains("DECRYPT_YOUR_FILES")) {
-                        score += 90;
-                        reasons.add("Behavior Rule: Ransomware extortion demand note text matched.");
-                        attackTechniques.add("T1486"); // Data Encrypted for Impact
-                        if ("None".equals(threatName)) threatName = "Behavior.Ransomware.NoteText";
-                    }
+            // 2. T1059.001 - Encoded / obfuscated PowerShell
+            if (contentLower.contains("powershell -enc") || contentLower.contains("powershell -e ")
+                    || contentLower.contains("bypass -nop -w hidden")
+                    || contentLower.contains("-executionpolicy bypass -windowstyle hidden")) {
+                score += 70;
+                reasons.add("Behavior Rule: Obfuscated or encoded PowerShell execution sequence.");
+                attackTechniques.add("T1059.001");
+                if ("None".equals(threatName)) {
+                    threatName = "Behavior.Script.ObfuscatedPowerShell";
                 }
-            } catch (Exception ignored) {}
+            }
+
+            // 3. T1055 - Process memory injection APIs
+            if (content.contains("VirtualAllocEx") && content.contains("WriteProcessMemory")) {
+                score += 85;
+                reasons.add("Behavior Rule: process memory injection APIs detected.");
+                attackTechniques.add("T1055");
+                if ("None".equals(threatName)) {
+                    threatName = "Behavior.Injection.ProcessMemoryInjection";
+                }
+            }
+
+            // 4. T1486 - Ransomware extortion note
+            if (content.contains("YOUR_FILES_HAVE_BEEN_ENCRYPTED")
+                    || content.contains("DECRYPT_YOUR_FILES")
+                    || content.contains("ALL_YOUR_FILES_ARE_LOCKED")) {
+                score += 90;
+                reasons.add("Behavior Rule: ransomware extortion demand note text matched.");
+                attackTechniques.add("T1486");
+                if ("None".equals(threatName)) {
+                    threatName = "Behavior.Ransomware.NoteText";
+                }
+            }
+
+            // 5. T1547.001 - autostart persistence written by a script
+            if ((contentLower.contains("currentversion\\run") || contentLower.contains("currentversion/run"))
+                    && contentLower.contains("reg add")) {
+                score += 60;
+                reasons.add("Behavior Rule: script registers a Run-key autostart entry.");
+                attackTechniques.add("T1547.001");
+                if ("None".equals(threatName)) {
+                    threatName = "Behavior.Persistence.RegistryRunKey";
+                }
+            }
         }
 
         if (score > 0) {
-            EngineResult.TrustTier tier = score >= 80 ? EngineResult.TrustTier.TRUSTED_AUTO_QUARANTINE : EngineResult.TrustTier.SUSPICION_USER_PROMPT;
+            EngineResult.TrustTier tier = score >= 80
+                    ? EngineResult.TrustTier.TRUSTED_AUTO_QUARANTINE
+                    : EngineResult.TrustTier.SUSPICION_USER_PROMPT;
             return new EngineResult(getEngineId(), score, tier, threatName, reasons, attackTechniques);
         }
 
         return EngineResult.clean(getEngineId());
+    }
+
+    private static boolean isDocumentExtension(String nameLower) {
+        return nameLower.endsWith(".pdf") || nameLower.endsWith(".jpg") || nameLower.endsWith(".jpeg")
+                || nameLower.endsWith(".png") || nameLower.endsWith(".txt") || nameLower.endsWith(".docx")
+                || nameLower.endsWith(".xlsx") || nameLower.endsWith(".mp3") || nameLower.endsWith(".mp4");
     }
 }

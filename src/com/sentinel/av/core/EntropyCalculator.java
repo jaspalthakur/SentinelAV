@@ -1,10 +1,10 @@
 package com.sentinel.av.core;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
 
-public class EntropyCalculator {
+public final class EntropyCalculator {
 
     public static class EntropyAnalysisResult {
         private final double overallEntropy;
@@ -22,49 +22,60 @@ public class EntropyCalculator {
         public boolean isHighEntropy() { return isHighEntropy; }
     }
 
+    private static final int BLOCK_SIZE = 8192;
+    private static final int MAX_SAMPLED_BLOCKS = 32;
+
+    private EntropyCalculator() {
+    }
+
     /**
-     * Calculates Block-Wise Shannon Entropy (8KB block size).
-     * Prevents false positives on compressed media (ZIP, JPEG, MP4).
+     * Calculates block-wise Shannon entropy (8 KiB blocks) and flags packed or encrypted
+     * payloads. Legitimate compressed media (ZIP/JPEG/PNG) is never flagged.
      */
     public static EntropyAnalysisResult analyzeEntropy(File file) {
-        if (file == null || !file.exists() || !file.isFile() || file.length() < 1024) {
+        if (file == null || !file.isFile() || file.length() < 1024) {
+            return new EntropyAnalysisResult(0.0, 0.0, false);
+        }
+        return analyzeEntropy(file, MagicByteUtils.detectFileType(file));
+    }
+
+    /** Variant that reuses a magic-byte type already detected by the caller. */
+    public static EntropyAnalysisResult analyzeEntropy(File file, MagicByteUtils.FileType fileType) {
+        if (file == null || !file.isFile() || file.length() < 1024) {
             return new EntropyAnalysisResult(0.0, 0.0, false);
         }
 
-        MagicByteUtils.FileType fileType = MagicByteUtils.detectFileType(file);
-
-        // Do not flag high entropy for legitimate compressed media formats (ZIP, JPEG, PNG)
         if (MagicByteUtils.isLegitimateCompressedFormat(fileType)) {
-            double overall = calculateBlockEntropy(file, 8192, 1)[0];
+            double overall = calculateBlockEntropy(file, BLOCK_SIZE, 1)[0];
             return new EntropyAnalysisResult(overall, overall, false);
         }
 
-        double[] blockEntropies = calculateBlockEntropy(file, 8192, 32); // Sample up to 32 blocks
+        double[] blockEntropies = calculateBlockEntropy(file, BLOCK_SIZE, MAX_SAMPLED_BLOCKS);
         double overall = blockEntropies[0];
         double maxBlock = 0.0;
-
         for (double b : blockEntropies) {
-            if (b > maxBlock) maxBlock = b;
+            if (b > maxBlock) {
+                maxBlock = b;
+            }
         }
 
-        // Only flag high entropy for executables or uncompressed scripts/docs
-        boolean isHigh = (maxBlock >= 7.80 || overall >= 7.65);
+        boolean isHigh = maxBlock >= 7.80 || overall >= 7.65;
         return new EntropyAnalysisResult(overall, maxBlock, isHigh);
     }
 
     private static double[] calculateBlockEntropy(File file, int blockSize, int maxBlocksToSample) {
         double[] results = new double[maxBlocksToSample + 1];
-        long fileSize = file.length();
-
         int[] totalFrequency = new int[256];
         long totalBytesRead = 0;
 
-        try (InputStream fis = new FileInputStream(file)) {
+        java.io.InputStream in = null;
+        try {
+            in = new java.io.BufferedInputStream(Files.newInputStream(file.toPath()));
             byte[] buffer = new byte[blockSize];
             int blockIndex = 1;
             int bytesRead;
 
-            while ((bytesRead = fis.read(buffer)) != -1 && blockIndex <= maxBlocksToSample) {
+            while (blockIndex <= maxBlocksToSample && (bytesRead = in.read(buffer)) != -1) {
                 int[] blockFrequency = new int[256];
                 for (int i = 0; i < bytesRead; i++) {
                     int b = buffer[i] & 0xFF;
@@ -72,22 +83,28 @@ public class EntropyCalculator {
                     totalFrequency[b]++;
                 }
                 totalBytesRead += bytesRead;
-
                 results[blockIndex] = calculateShannon(blockFrequency, bytesRead);
                 blockIndex++;
             }
-
             results[0] = calculateShannon(totalFrequency, totalBytesRead);
-
         } catch (Exception e) {
             return new double[]{0.0};
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (Exception ignored) {
+                    // closing a read-only stream cannot fail in a recoverable way
+                }
+            }
         }
-
         return results;
     }
 
     private static double calculateShannon(int[] frequency, long totalBytes) {
-        if (totalBytes == 0) return 0.0;
+        if (totalBytes == 0) {
+            return 0.0;
+        }
         double entropy = 0.0;
         for (int count : frequency) {
             if (count > 0) {
