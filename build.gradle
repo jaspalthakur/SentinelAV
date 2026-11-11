@@ -1,0 +1,47 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.sentinel'
+version = '3.5.0'
+
+sourceCompatibility = JavaVersion.VERSION_21
+targetCompatibility = JavaVersion.VERSION_21
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation files('lib/flatlaf-3.4.1.jar')
+}
+
+application {
+    mainClass = 'com.sentinel.av.Main'
+}
+
+// Assemble a fat JAR (includes compiled classes; external libs are referenced via classpath)
+jar {
+    manifest {
+        attributes 'Main-Class': application.mainClass
+    }
+    from sourceSets.main.output
+}
+
+// Build native Windows executable using GraalVM native-image
+task nativeExe(type: Exec) {
+    group = 'build'
+    description = 'Build native Windows .exe using GraalVM native-image'
+    dependsOn jar
+    // Ensure GraalVM is on PATH; otherwise set JAVA_HOME and PATH via environment variables
+    commandLine 'native-image',
+        '-cp', "${projectDir}/build/libs/${jar.archiveBaseName.get()}.jar;${projectDir}/lib/flatlaf-3.4.1.jar",
+        'com.sentinel.av.Main',
+        '-H:Name=SentinelAV',
+        '--no-fallback',
+        '--no-server',
+        '-H:EnableAllSecurityServices=true',
+        '-H:EnableURLProtocols=http,https',
+        '-H:AllowIncompleteClasspath=true'
+}
