@@ -1,6 +1,10 @@
 # SentinelAV v3.8 — EDR & MITRE ATT&CK Threat Engine
 
 [![Build and Test](https://github.com/jaspalthakur/SentinelAV/actions/workflows/build.yml/badge.svg)](https://github.com/jaspalthakur/SentinelAV/actions/workflows/build.yml)
+[![Download Installer](https://img.shields.io/github/v/release/jaspalthakur/SentinelAV?label=Download%20Installer&color=success)](https://github.com/jaspalthakur/SentinelAV/releases/latest)
+
+> 📦 **Download Standalone Windows Installer (.exe):**  
+> Grab the latest ready-to-run setup file directly from **[GitHub Releases (v3.5.0)](https://github.com/jaspalthakur/SentinelAV/releases/tag/v3.5.0)**. No Java or extra dependencies required.
 
 **SentinelAV** is an open-source inspired Cyber Security / EDR (Endpoint Detection and Response) suite written in Java 21. It combines a pluggable detection-engine architecture, MITRE ATT&CK technique mapping, ransomware canary honeypots, safe archive inspection, an AES-256-GCM encrypted quarantine vault, and STIX 2.1 report generation behind a polished dark FlatLaf desktop UI and a scriptable headless CLI.
 
